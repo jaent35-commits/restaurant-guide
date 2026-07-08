@@ -1,0 +1,102 @@
+@import "./styles/theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family-base);
+  color: var(--color-text);
+  background: var(--color-surface);
+  letter-spacing: var(--letter-spacing-base);
+}
+
+/* ==========================================================================
+   카카오맵 CustomOverlay 마커 — 토큰만 참조
+   ========================================================================== */
+.map-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.map-marker__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  background: var(--color-gray-100);
+  border: 3px solid var(--color-primary-300);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-badge);
+}
+.map-marker--credit .map-marker__icon {
+  border-color: var(--color-danger);
+}
+.map-marker__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--space-1);
+  padding: 2px var(--space-2);
+  background: var(--color-gray-100);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-badge);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.map-marker__label strong {
+  font-weight: var(--font-weight-bold);
+}
+.map-marker__label span {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+.map-marker__label span.is-credit {
+  color: var(--color-danger);
+}
+
+/* Leaflet divIcon 은 top-left 를 좌표에 두므로, 마커를 좌표 중심으로 보정 */
+.osm-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  transform: translate(-50%, -24px); /* 원형 아이콘(48px) 중심 = 좌표 */
+}
+.osm-anchor--center {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+}
+
+.map-tower {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  background: var(--color-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popup);
+}
+.map-tower__icon {
+  font-size: 26px;
+}
+.map-tower__label {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-gray-100);
+}

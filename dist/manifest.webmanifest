@@ -1,0 +1,17 @@
+{
+  "name": "R&D센터 야근 식당 이용 가이드",
+  "short_name": "야근식당",
+  "description": "대교타워 주변 야근 식당 예치금 관리 앱",
+  "lang": "ko",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#6491ff",
+  "background_color": "#f7f7fa",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

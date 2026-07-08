@@ -1,0 +1,116 @@
+/* =============================================================================
+   Design Tokens — Figma Variables 추출본 (Single Source of Truth)
+   -----------------------------------------------------------------------------
+   ⚠ HEX 코드는 오직 이 파일(:root)에만 존재합니다.
+     tailwind.config.js / 컴포넌트는 모두 아래 CSS 변수를 var(--...) 로 참조합니다.
+   출처: Figma "스타일가이드" 섹션(node 1:1829)의 published Variables
+        (design-system 프로젝트와 동일 원천, radius/spacing 토큰 추가)
+   ============================================================================= */
+
+:root {
+  /* ==========================================================================
+     COLOR — Primitive (원시 색상)
+     ========================================================================== */
+  /* Gray scale */
+  --color-gray-100: #ffffff;
+  --color-gray-200: #f7f7fa;
+  --color-gray-300: #e6e9f0;
+  --color-gray-400: #d8dbe3;
+  --color-gray-500: #d2d8e0;
+  --color-gray-600: #b3bac5;
+  --color-gray-700: #8390a3;
+  --color-gray-800: #616d82;
+  --color-gray-900: #3f4855;
+
+  /* Primary (Blue) */
+  --color-primary-100: #eef6ff;
+  --color-primary-200: #98d4ff;
+  --color-primary-300: #64a7ff;
+  --color-primary-400: #6491ff;
+
+  /* Accent / Status */
+  --color-red-100: #ff886e;
+  --color-orange-100: #ffa666;
+  --color-purple-100: #a383ff;
+  --color-yellow-100: #f3bc50;
+
+  /* Icon */
+  --color-icon-100: #b1b8c0;
+
+  /* ==========================================================================
+     COLOR — Semantic (용도 색상) — 위 primitive 를 참조
+     ========================================================================== */
+  /* List (라이트/다크 겸용) */
+  --color-list-bg-100: #212429; /* dark list background */
+  --color-list-bg-200: var(--color-gray-200);
+  --color-list-line-100: var(--color-gray-300);
+  --color-list-line-200: var(--color-gray-400);
+
+  /* Popup */
+  --color-popup-bg-100: var(--color-gray-100);
+  --color-popup-bg-200: var(--color-gray-200);
+  --color-popup-line-100: var(--color-gray-300);
+  --color-popup-line-200: var(--color-gray-400);
+
+  /* 편의용 별칭 (semantic role) */
+  --color-bg: var(--color-gray-100);
+  --color-surface: var(--color-gray-200);
+  --color-border: var(--color-gray-300);
+  --color-text: var(--color-gray-900);
+  --color-text-muted: var(--color-gray-700);
+  --color-primary: var(--color-primary-400);
+  --color-danger: var(--color-red-100);   /* 외상/오류 */
+  --color-warning: var(--color-orange-100);
+
+  /* ==========================================================================
+     TYPOGRAPHY
+     - Font family: NanumBarunGothic (Figma 전역)
+     - Body2 만 Figma Variable 로 published (14 / 400 / lh22) → 확정값
+     ========================================================================== */
+  --font-family-base: "NanumBarunGothic", "Malgun Gothic", sans-serif;
+
+  /* Font weight */
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  /* Font size */
+  --font-size-title: 20px;   /* 조정 대상 */
+  --font-size-header: 18px;  /* 조정 대상 */
+  --font-size-body1: 16px;   /* 조정 대상 */
+  --font-size-body2: 14px;   /* ✔ Figma Variable(Body2) */
+  --font-size-caption: 12px; /* 조정 대상 */
+
+  /* Line height */
+  --line-height-title: 30px;   /* 조정 대상 */
+  --line-height-header: 26px;  /* 조정 대상 */
+  --line-height-body1: 24px;   /* 조정 대상 */
+  --line-height-body2: 22px;   /* ✔ Figma Variable(Body2) */
+  --line-height-caption: 18px; /* 조정 대상 */
+
+  /* Letter spacing */
+  --letter-spacing-base: 0;
+
+  /* ==========================================================================
+     RADIUS / SPACING — Figma 컴포넌트 실측 기반 스케일
+     ========================================================================== */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ==========================================================================
+     EFFECT — Shadow
+     ========================================================================== */
+  /* Badge_gray_shadow: DROP_SHADOW #0000001A offset(0,2) radius 2 spread 0 */
+  --shadow-badge: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
+  --shadow-popup: 0 8px 24px 0 rgba(0, 0, 0, 0.16);
+}
