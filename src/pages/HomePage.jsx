@@ -1,151 +1,107 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "../store";
-import { Badge, Button, Input, Modal, useToast } from "../components";
-import VWorldMap from "../components/VWorldMap";
-import { formatKRW, restaurantIcon, depositStatus } from "../utils";
-import { useTowerGeo } from "../geo";
-import { VWORLD_KEY_STORAGE, VWORLD_DOMAIN_STORAGE } from "../vworldSdk";
 
-/** 지도 설정 모달 — 브이월드(VWorld) 인증키 · 등록 도메인 등록/삭제 */
-function MapSettingsModal({ open, onClose, vworldKey, vworldDomain, onSave, onRemove }) {
-  const [key, setKey] = useState("");
-  const [domain, setDomain] = useState("");
+/** 🗺️ Leaflet 청정 지도를 HomePage 내부에 직접 심어줍니다! */
+function CleanLeafletMap() {
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+
+  useEffect(() => {
+    if (mapInstance.current || !mapRef.current) return;
+
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.onload = () => {
+      if (!window.L) return;
+
+      const L = window.L;
+      const centerCoords = [37.4925, 126.9250]; // 🏢 대교타워 위경도
+
+      const map = L.map(mapRef.current).setView(centerCoords, 16);
+      mapInstance.current = map;
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const marker = L.marker(centerCoords).addTo(map);
+      marker.bindPopup("<b>대교타워 🏢</b>").openPopup();
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, []);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="지도 설정"
-      footer={<Button variant="secondary" onClick={onClose}>닫기</Button>}
-    >
-      <div className="flex flex-col gap-token-4 text-body2">
-        <p className="text-text">
-          지도는 <b>브이월드(VWorld)</b> 2D 지도 API 2.0을 사용합니다. 국토교통부
-          국가공간정보포털(www.vworld.kr)에서 인증키를 발급받아 등록해야 지도와 식당 주소 →
-          좌표 변환이 정상 동작합니다.
-        </p>
-        <ol className="list-decimal pl-token-5 text-caption text-text-muted">
-          <li>www.vworld.kr → 회원가입 후 오픈API → 인증키 신청</li>
-          <li>인증키 관리에서 <b>사용 도메인</b>에 접속 주소 등록 (예: http://localhost:5174)</li>
-          <li>발급된 <b>인증키</b>와 등록한 <b>도메인</b>을 아래에 입력</li>
-        </ol>
-
-        {vworldKey ? (
-          <div className="flex items-center justify-between rounded-md bg-surface px-token-4 py-token-3">
-            <div className="min-w-0">
-              <p className="truncate text-text">
-                인증키 등록됨 <span className="text-text-muted">({vworldKey.slice(0, 6)}…)</span>
-              </p>
-              <p className="truncate text-caption text-text-muted">도메인: {vworldDomain || "-"}</p>
-            </div>
-            <Button variant="danger" size="sm" onClick={onRemove}>
-              등록 삭제
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-token-2">
-            <Input
-              label="브이월드 인증키"
-              placeholder="예: 1A2B3C4D-..."
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-            />
-            <Input
-              label="등록 도메인"
-              placeholder="예: http://localhost:5174"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-            />
-            <Button
-              className="self-end"
-              onClick={() => {
-                if (!key.trim() || !domain.trim()) return;
-                onSave(key.trim(), domain.trim());
-                setKey("");
-                setDomain("");
-              }}
-            >
-              저장
-            </Button>
-          </div>
-        )}
-        <p className="text-caption text-text-muted">* 인증키 · 도메인은 이 브라우저에만 저장됩니다.</p>
-      </div>
-    </Modal>
+    <div className="h-full w-full rounded-lg border border-list-line-100 bg-surface">
+      <div ref={mapRef} className="h-full w-full rounded-lg" style={{ minHeight: "520px" }} />
+    </div>
   );
 }
 
 export default function HomePage({ goDetail }) {
   const { restaurantsWithBalance } = useStore();
-  const toast = useToast();
-  const [vworldKey, setVworldKey] = useState(
-    () => localStorage.getItem(VWORLD_KEY_STORAGE) || import.meta.env.VITE_VWORLD_KEY || ""
-  );
-  const [vworldDomain, setVworldDomain] = useState(
-    () => localStorage.getItem(VWORLD_DOMAIN_STORAGE) || import.meta.env.VITE_VWORLD_DOMAIN || ""
-  );
-  const [mapError, setMapError] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const tower = useTowerGeo(); // 대교타워 실좌표 — 초기값은 근사값, 지오코딩 완료 시 자동 갱신
 
   // 예치금 0원 → 홈에서 가리기, 예치금 많은 순 정렬
   const visible = restaurantsWithBalance()
     .filter((r) => r.balance !== 0)
     .sort((a, b) => b.balance - a.balance);
 
-  const saveConfig = (key, domain) => {
-    localStorage.setItem(VWORLD_KEY_STORAGE, key);
-    localStorage.setItem(VWORLD_DOMAIN_STORAGE, domain);
-    setMapError(false);
-    setVworldKey(key);
-    setVworldDomain(domain);
-    setSettingsOpen(false);
-    toast("브이월드 지도 설정이 저장되었습니다.");
+  // 💡 [자급자족 1] 외부 utils 안 거치고, 금액을 '원' 포맷으로 직접 변경
+  const formatMoney = (amount) => {
+    return `${Number(amount).toLocaleString("ko-KR")}원`;
   };
-  const removeConfig = () => {
-    localStorage.removeItem(VWORLD_KEY_STORAGE);
-    localStorage.removeItem(VWORLD_DOMAIN_STORAGE);
-    setVworldKey("");
-    setVworldDomain("");
-    setMapError(false);
-    setSettingsOpen(false);
-    toast("브이월드 지도 설정을 삭제했습니다.", "info");
+
+  // 💡 [자급자족 2] 외부 함수 없이, 식당 메뉴 이름에 따라 이모지 아이콘 자동 매칭
+  const getIcon = (menu = "") => {
+    const rules = [
+      [/(감자탕|탕|국밥|찌개|전골)/, "🍲"],
+      [/(치킨|닭|찜닭)/, "🍗"],
+      [/(고기|축산|삼겹|갈비|곱창|정육)/, "🥩"],
+      [/(국수|칼국수|면|라멘|우동|파스타)/, "🍜"],
+      [/(김밥|분식|떡볶이)/, "🍙"],
+      [/(초밥|회|스시|물회)/, "🍣"],
+      [/(돈까스|돈가스|카츠|katsu|튀김)/i, "🍤"],
+      [/(샌드위치|샌드|서브|토스트)/, "🥪"],
+      [/(피자)/, "🍕"],
+      [/(버거|햄버거)/, "🍔"],
+      [/(카페|커피|디저트)/, "☕"],
+      [/(중식|짜장|짬뽕)/, "🥡"],
+      [/(도시락|백반|한식)/, "🍱"]
+    ];
+    for (const [regex, emoji] of rules) {
+      if (regex.test(menu)) return emoji;
+    }
+    return "🍴";
   };
 
   return (
     <div className="grid gap-token-4 lg:grid-cols-[1fr_360px]">
+      {/* 🗺️ 상단 왼쪽 파란 네모 자리 (청정 지도) */}
       <section className="flex min-h-[420px] flex-col gap-token-2">
         <div className="h-[520px] w-full">
-          <VWorldMap
-            restaurants={visible}
-            onSelect={goDetail}
-            tower={tower}
-            vworldKey={vworldKey}
-            vworldDomain={vworldDomain}
-            onError={() => {
-              setMapError(true);
-              toast("브이월드 지도를 불러오지 못했습니다. 인증키/도메인을 확인해 주세요.", "error");
-            }}
-          />
+          <CleanLeafletMap />
         </div>
         <div className="flex items-center justify-between">
           <p className="text-caption text-text-muted">
-            브이월드(VWorld) · 대교타워 기준 실좌표 표시
-            {mapError && " · 로드 실패"}
+            오픈스트리트맵(OSM) · 대교타워 기준 실좌표 표시
           </p>
-          <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
-            지도 설정
-          </Button>
         </div>
       </section>
 
+      {/* 🔴 상단 오른쪽 빨간 박스 자리 (식당 목록 에러 원천 봉쇄 버전) */}
       <section className="flex flex-col gap-token-3">
         <h2 className="text-header font-bold text-text">
           등록 식당 <span className="text-text-muted">({visible.length})</span>
         </h2>
         <ul className="flex flex-col gap-token-2">
           {visible.map((r) => {
-            const status = depositStatus(r.balance);
             return (
               <li key={r.id}>
                 <button
@@ -153,22 +109,31 @@ export default function HomePage({ goDetail }) {
                   onClick={() => goDetail(r.id)}
                   className="flex w-full items-center gap-token-3 rounded-lg border border-list-line-100 bg-gray-100 p-token-3 text-left hover:border-primary-300"
                 >
+                  {/* 이모지 매칭 적용 */}
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-header">
-                    {restaurantIcon(r)}
+                    {getIcon(r.mainMenu || r.name)}
                   </span>
+                  
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-token-2">
                       <span className="truncate text-body2 font-bold text-text">{r.name}</span>
-                      {status.key === "credit" && <Badge tone="credit">외상</Badge>}
+                      {/* 잔액이 0보다 작으면 외상 뱃지 표시 */}
+                      {r.balance < 0 && (
+                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-caption font-medium text-red-800">
+                          외상
+                        </span>
+                      )}
                     </span>
                     <span className="block truncate text-caption text-text-muted">{r.mainMenu}</span>
                   </span>
+
+                  {/* 돈 포맷팅 적용 */}
                   <span
                     className={`shrink-0 text-body2 font-bold ${
                       r.balance < 0 ? "text-danger" : "text-primary-400"
                     }`}
                   >
-                    {formatKRW(r.balance)}
+                    {formatMoney(r.balance)}
                   </span>
                 </button>
               </li>
@@ -181,15 +146,6 @@ export default function HomePage({ goDetail }) {
           )}
         </ul>
       </section>
-
-      <MapSettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        vworldKey={vworldKey}
-        vworldDomain={vworldDomain}
-        onSave={saveConfig}
-        onRemove={removeConfig}
-      />
     </div>
   );
 }

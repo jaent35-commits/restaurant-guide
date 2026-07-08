@@ -1,7 +1,59 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useStore } from "../store";
-import { Button, Table, Badge, Modal, Input, Textarea, Checkbox, useToast, VoteButtons, MiniMap } from "../components";
+import { Button, Table, Badge, Modal, Input, Textarea, Checkbox, useToast, VoteButtons } from "../components";
 import { formatKRW, menuIcon, restaurantIcon, depositStatus, ICON_CHOICES } from "../utils";
+
+/** 🗺️ 상세페이지 전용: 인증키 에러 없는 독립형 청정 미니 지도 컴포넌트 */
+function CleanDetailMiniMap({ restaurant }) {
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+
+  useEffect(() => {
+    if (mapInstance.current || !mapRef.current) return;
+
+    // 식당의 위경도 좌표가 없으면 기본 대교타워 좌표 사용
+    const lat = restaurant.lat ?? 37.4925;
+    const lng = restaurant.lng ?? 126.9250;
+
+    // 동적으로 Leaflet 로드
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.onload = () => {
+      if (!window.L) return;
+
+      const L = window.L;
+      const coords = [lat, lng];
+
+      // 1. 지도 객체 생성 및 포커싱
+      const map = L.map(mapRef.current).setView(coords, 17);
+      mapInstance.current = map;
+
+      // 2. 고화질 지도 타일 깔기
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // 3. [오타 수정 완료!] 해당 식당 위치에 정확하게 핀 꽂기
+      const marker = L.marker(coords).addTo(map);
+      marker.bindPopup(`<b>${restaurant.name}</b><br>${restaurant.mainMenu || "야근 식당"}`).openPopup();
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, [restaurant]);
+
+  return (
+    <div className="h-full w-full rounded-lg border border-list-line-100 bg-surface overflow-hidden">
+      <div ref={mapRef} className="h-full w-full" style={{ minHeight: "260px" }} />
+    </div>
+  );
+}
 
 /** 가게 정보 편집 모달 — 주소(text)와 링크(url)는 별도 입력 */
 function EditModal({ open, onClose, restaurant, onSave }) {
@@ -204,7 +256,7 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
               {restaurant.coupon && <Badge tone="coupon">🎟️ 쿠폰</Badge>}
             </div>
             <div className="flex items-center gap-token-4">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-title">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-header">
               {restaurantIcon(restaurant)}
             </span>
             <div>
@@ -275,22 +327,21 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
             </div>
           )}
         </dl>
-        </div>
+      </div>
 
-        {/* 식당 위치 고정 지도 — PC 에서는 우측 열 전체 높이 */}
-        <div className="mt-token-4 h-[240px] lg:row-span-2 lg:mt-0 lg:h-full lg:min-h-[260px]">
-          <MiniMap restaurant={{ ...restaurant, balance }} />
-        </div>
+      {/* 🗺️ 청정 미니 지도 컴포넌트 호출 */}
+      <div className="mt-4 h-[240px] lg:row-span-2 lg:mt-0 lg:h-full lg:min-h-[260px]">
+        <CleanDetailMiniMap restaurant={restaurant} />
+      </div>
 
-        <div className="mt-token-4 flex justify-end gap-token-2 lg:self-end">
-          <Button variant="secondary" onClick={() => goCharge(restaurant.id)}>예치금 충전</Button>
-          <Button onClick={() => goUse(restaurant.id)} disabled={balance === 0}>
-            사용 등록
-          </Button>
-        </div>
-      </section>
+      <div className="mt-4 flex justify-end gap-token-2 lg:self-end">
+        <Button variant="secondary" onClick={() => goCharge(restaurant.id)}>예치금 충전</Button>
+        <Button onClick={() => goUse(restaurant.id)} disabled={balance === 0}>
+          사용 등록
+        </Button>
+      </div>
+    </section>
 
-      {/* 충전/사용 이력 — 최소 700px 고정, 좁은 화면에서 가로 스크롤 */}
       <section className="flex flex-col gap-token-3">
         <h3 className="text-header font-bold text-text">
           충전/사용 이력 <span className="text-text-muted">({history.length})</span>
@@ -303,6 +354,7 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
         />
         {history.length > visibleCount && (
           <div className="flex justify-center">
+            {/* 💡 [태그 오타 수정 완료] </br>를 원래 짝인 </Button>으로 바꿨습니다! */}
             <Button variant="secondary" size="sm" onClick={() => setVisibleCount((n) => n + 5)}>
               더 보기 ({Math.min(5, history.length - visibleCount)}건)
             </Button>

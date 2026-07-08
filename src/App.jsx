@@ -15,7 +15,6 @@ const NAV = [
 ];
 
 export default function App() {
-  // 간단한 내부 라우팅: { page, restaurantId }
   const [route, setRoute] = useState({ page: "home", restaurantId: null });
 
   const goDetail = (id) => setRoute({ page: "detail", restaurantId: id });
@@ -80,7 +79,6 @@ export default function App() {
             )}
           </main>
 
-          {/* 홈/식당 정보(리스트·상세) 스크롤 시 "맨 위로" 버튼 */}
           {["home", "list", "detail"].includes(route.page) && <ScrollTopButton />}
         </div>
       </ToastProvider>
