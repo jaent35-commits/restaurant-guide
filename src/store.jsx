@@ -1,11 +1,24 @@
-// 앱 데이터 스토어 — Context + localStorage 영속화
+// 앱 데이터 스토어 — Context + localStorage 영속화 + 노션 동기화(옵션)
 // restaurants: 식당 마스터, transactions: 충전/사용 이력 (잔액은 이력 합산으로 계산)
-import React, { createContext, useContext, useEffect, useMemo, useReducer } from "react";
+// VITE_API_BASE 가 설정되면 노션이 원본 DB가 된다:
+//   시작 시 노션에서 로드 → 변경 시 낙관적 로컬 반영 후 백그라운드로 노션에 기록.
+//   영수증 이미지와 내 투표(myVote)는 기기별 localStorage 에만 보관한다.
+import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import { uid } from "./utils";
 import { SEED_GEO, svgToGeo, geocodeAddress } from "./geo";
+import {
+  apiEnabled,
+  fetchData,
+  setupSchema,
+  apiCreateRestaurant,
+  apiUpdateRestaurant,
+  apiCreateTransaction,
+  apiUpdateTransaction,
+  apiDeleteTransaction,
+} from "./api";
 
-// v5: 2026-07-08 지도/지오코딩을 브이월드(VWorld) API로 교체 — 이전 버전에서 이미
-//     지오코딩 시도(geocodedFrom) 기록이 남아있으면 재시도하지 않으므로, 키를 올려 강제 재지오코딩
+// v5: 2026-07-08 지도는 네이버 지도(JS API v3), 지오코딩은 OpenStreetMap Nominatim 사용
+//     (STORAGE_KEY 는 기존 사용자 데이터 보존을 위해 v5 유지)
 const STORAGE_KEY = "rnd-restaurant-guide-v5";
 
 /* 증빙서류 시드용 플레이스홀더 이미지 (영수증 모양 SVG) */
@@ -213,8 +226,31 @@ function loadInitial() {
   return { ...seed, restaurants: seed.restaurants.map(ensureCoords) };
 }
 
+/** 좋아요/싫어요 토글 결과 계산 — reducer 와 노션 동기화에서 공용 */
+function applyVote(r, vote) {
+  let { likes, dislikes, myVote } = r;
+  if (myVote === vote) {
+    if (vote === "like") likes -= 1;
+    else dislikes -= 1;
+    myVote = null;
+  } else {
+    if (myVote === "like") likes -= 1;
+    if (myVote === "dislike") dislikes -= 1;
+    if (vote === "like") likes += 1;
+    else dislikes += 1;
+    myVote = vote;
+  }
+  return { likes, dislikes, myVote };
+}
+
 function reducer(state, action) {
   switch (action.type) {
+    case "LOAD":
+      // 노션에서 받은 전체 데이터로 교체
+      return {
+        restaurants: action.restaurants.map(ensureCoords),
+        transactions: action.transactions,
+      };
     case "ADD_RESTAURANT":
       return { ...state, restaurants: [...state.restaurants, action.restaurant] };
     case "UPDATE_RESTAURANT":
@@ -226,26 +262,25 @@ function reducer(state, action) {
       };
     case "ADD_TRANSACTION":
       return { ...state, transactions: [...state.transactions, action.transaction] };
+    case "UPDATE_TRANSACTION":
+      return {
+        ...state,
+        transactions: state.transactions.map((t) =>
+          t.id === action.id ? { ...t, ...action.patch } : t
+        ),
+      };
+    case "DELETE_TRANSACTION":
+      return {
+        ...state,
+        transactions: state.transactions.filter((t) => t.id !== action.id),
+      };
     case "VOTE": {
       // 좋아요/싫어요 토글 — 같은 버튼 재클릭 시 취소, 반대 버튼 클릭 시 전환
       return {
         ...state,
-        restaurants: state.restaurants.map((r) => {
-          if (r.id !== action.id) return r;
-          let { likes, dislikes, myVote } = r;
-          if (myVote === action.vote) {
-            if (action.vote === "like") likes -= 1;
-            else dislikes -= 1;
-            myVote = null;
-          } else {
-            if (myVote === "like") likes -= 1;
-            if (myVote === "dislike") dislikes -= 1;
-            if (action.vote === "like") likes += 1;
-            else dislikes += 1;
-            myVote = action.vote;
-          }
-          return { ...r, likes, dislikes, myVote };
-        }),
+        restaurants: state.restaurants.map((r) =>
+          r.id === action.id ? { ...r, ...applyVote(r, action.vote) } : r
+        ),
       };
     }
     case "RESET":
@@ -257,8 +292,193 @@ function reducer(state, action) {
 
 const StoreContext = createContext(null);
 
+/* ------------------------- 기기 로컬 전용 데이터 -------------------------
+   노션에 올리지 않는 데이터: 영수증 이미지(용량), 내 투표(개인별).
+   { receipts: { [txId]: dataUrl }, votes: { [restaurantId]: "like"|"dislike" } } */
+const LOCAL_EXTRAS_KEY = STORAGE_KEY + "-local-extras";
+const NOTION_IDMAP_KEY = STORAGE_KEY + "-notion-ids";
+
+function loadJSON(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function saveJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    // 용량 초과 등은 치명적이지 않으므로 무시
+  }
+}
+
 export function StoreProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, loadInitial);
+  const [state, rawDispatch] = useReducer(reducer, undefined, loadInitial);
+
+  // 최신 state 참조 (동기화 처리에서 사용)
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // 앱 id → 노션 페이지 id 매핑, 기기 로컬 전용 데이터
+  const idMapRef = useRef(loadJSON(NOTION_IDMAP_KEY, {}));
+  const extrasRef = useRef(loadJSON(LOCAL_EXTRAS_KEY, { receipts: {}, votes: {} }));
+
+  // 노션 기록은 순서 보장을 위해 프라미스 체인으로 직렬 처리
+  // (식당 신규 등록 직후 충전 등록처럼 앞 작업의 노션 id가 필요한 경우 대비)
+  const queueRef = useRef(Promise.resolve());
+  const enqueue = (job) => {
+    queueRef.current = queueRef.current
+      .then(job)
+      .catch((e) => console.warn("[노션 동기화 실패]", e));
+  };
+
+  const notionIdOf = (appId) => idMapRef.current[appId] || appId;
+
+  /** 페이지에서 쓰는 dispatch — 로컬 즉시 반영 후 노션에 백그라운드 기록 */
+  const dispatch = (action) => {
+    const prev = stateRef.current;
+    rawDispatch(action);
+    if (!apiEnabled) return;
+
+    switch (action.type) {
+      case "ADD_RESTAURANT": {
+        const r = action.restaurant;
+        enqueue(async () => {
+          const { notionId } = await apiCreateRestaurant(r);
+          idMapRef.current[r.id] = notionId;
+          saveJSON(NOTION_IDMAP_KEY, idMapRef.current);
+        });
+        break;
+      }
+      case "UPDATE_RESTAURANT": {
+        const base = prev.restaurants.find((r) => r.id === action.id);
+        if (!base) break;
+        const merged = { ...base, ...action.patch };
+        enqueue(() => apiUpdateRestaurant(notionIdOf(action.id), merged));
+        break;
+      }
+      case "VOTE": {
+        const base = prev.restaurants.find((r) => r.id === action.id);
+        if (!base) break;
+        const merged = { ...base, ...applyVote(base, action.vote) };
+        extrasRef.current.votes[action.id] = merged.myVote;
+        saveJSON(LOCAL_EXTRAS_KEY, extrasRef.current);
+        enqueue(() => apiUpdateRestaurant(notionIdOf(action.id), merged));
+        break;
+      }
+      case "ADD_TRANSACTION": {
+        const t = action.transaction;
+        // 영수증 이미지는 기기 로컬에만 보관 (노션 미전송)
+        if (t.receipt) {
+          extrasRef.current.receipts[t.id] = t.receipt;
+          saveJSON(LOCAL_EXTRAS_KEY, extrasRef.current);
+        }
+        const restaurant = prev.restaurants.find((r) => r.id === t.restaurantId);
+        const prevBalance = prev.transactions
+          .filter((x) => x.restaurantId === t.restaurantId)
+          .reduce((sum, x) => sum + (x.type === "charge" ? x.amount : -x.amount), 0);
+        const balanceAfter = prevBalance + (t.type === "charge" ? t.amount : -t.amount);
+        const mmdd = (t.date || "").slice(5);
+        const title = `${restaurant?.name ?? ""} ${t.type === "charge" ? "충전" : "사용"} (${mmdd})`;
+        enqueue(() =>
+          apiCreateTransaction({
+            transaction: { ...t, receipt: undefined },
+            balanceAfter,
+            title,
+            restaurantPageId: notionIdOf(t.restaurantId),
+          })
+        );
+        break;
+      }
+      case "UPDATE_TRANSACTION": {
+        const base = prev.transactions.find((x) => x.id === action.id);
+        if (!base) break;
+        const merged = { ...base, ...action.patch };
+        // 영수증 이미지는 기기 로컬에만 보관 (노션 미전송)
+        if (action.patch.receipt !== undefined) {
+          if (action.patch.receipt) extrasRef.current.receipts[action.id] = action.patch.receipt;
+          else delete extrasRef.current.receipts[action.id];
+          saveJSON(LOCAL_EXTRAS_KEY, extrasRef.current);
+        }
+        // 수정 반영 후 해당 식당의 잔액 재계산
+        const balanceAfter = prev.transactions
+          .map((x) => (x.id === action.id ? merged : x))
+          .filter((x) => x.restaurantId === merged.restaurantId)
+          .reduce((sum, x) => sum + (x.type === "charge" ? x.amount : -x.amount), 0);
+        const restaurant = prev.restaurants.find((r) => r.id === merged.restaurantId);
+        const mmdd = (merged.date || "").slice(5);
+        const title = `${restaurant?.name ?? ""} ${merged.type === "charge" ? "충전" : "사용"} (${mmdd})`;
+        enqueue(() =>
+          apiUpdateTransaction(notionIdOf(action.id), {
+            transaction: { ...merged, receipt: undefined },
+            balanceAfter,
+            title,
+            restaurantPageId: notionIdOf(merged.restaurantId),
+          })
+        );
+        break;
+      }
+      case "DELETE_TRANSACTION": {
+        const base = prev.transactions.find((x) => x.id === action.id);
+        if (!base) break;
+        if (extrasRef.current.receipts[action.id]) {
+          delete extrasRef.current.receipts[action.id];
+          saveJSON(LOCAL_EXTRAS_KEY, extrasRef.current);
+        }
+        // 삭제 반영 후 해당 식당의 잔액 재계산
+        const balanceAfter = prev.transactions
+          .filter((x) => x.id !== action.id && x.restaurantId === base.restaurantId)
+          .reduce((sum, x) => sum + (x.type === "charge" ? x.amount : -x.amount), 0);
+        enqueue(() =>
+          apiDeleteTransaction(notionIdOf(action.id), {
+            balanceAfter,
+            restaurantPageId: notionIdOf(base.restaurantId),
+          })
+        );
+        break;
+      }
+      default:
+        break; // RESET 등은 로컬 전용
+    }
+  };
+
+  /* 시작 시 노션에서 전체 데이터 로드 (실패하면 로컬 캐시로 계속 동작) */
+  useEffect(() => {
+    if (!apiEnabled) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        await setupSchema().catch(() => {}); // 누락 속성 자동 보정 (실패해도 진행)
+        const { restaurants, transactions } = await fetchData();
+        if (cancelled) return;
+        // 노션 페이지 id 매핑 갱신 + 로컬 전용 데이터(영수증/내 투표) 결합
+        for (const r of restaurants) {
+          if (r.notionId) idMapRef.current[r.id] = r.notionId;
+        }
+        for (const t of transactions) {
+          if (t.notionId) idMapRef.current[t.id] = t.notionId;
+        }
+        saveJSON(NOTION_IDMAP_KEY, idMapRef.current);
+        rawDispatch({
+          type: "LOAD",
+          restaurants: restaurants.map((r) => ({
+            ...r,
+            myVote: extrasRef.current.votes[r.id] ?? null,
+          })),
+          transactions: transactions.map((t) => ({
+            ...t,
+            receipt: extrasRef.current.receipts[t.id] ?? null,
+          })),
+        });
+      } catch (e) {
+        console.warn("[노션 로드 실패 — 로컬 데이터로 동작]", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -316,10 +536,13 @@ export function StoreProvider({ children }) {
       dispatch,
       balanceOf,
       historyOf,
+      /** 노션 동기화 활성 여부 (UI 안내용) */
+      syncEnabled: apiEnabled,
       /** 잔액 포함 식당 목록 */
       restaurantsWithBalance: () =>
         state.restaurants.map((r) => ({ ...r, balance: balanceOf(r.id) })),
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;

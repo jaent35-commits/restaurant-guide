@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { StoreProvider } from "./store";
-import { ToastProvider, ScrollTopButton } from "./components";
+import { ToastProvider, ScrollTopButton, PushToggle, InstallToast } from "./components";
 import HomePage from "./pages/HomePage";
 import ListPage from "./pages/ListPage";
 import DetailPage from "./pages/DetailPage";
@@ -49,6 +49,7 @@ export default function App() {
                   );
                 })}
               </nav>
+              <PushToggle />
             </div>
           </header>
 
@@ -80,6 +81,9 @@ export default function App() {
           </main>
 
           {["home", "list", "detail"].includes(route.page) && <ScrollTopButton />}
+
+          {/* 홈 화면 진입 시 앱 미설치면 설치 유도 토스트 */}
+          {route.page === "home" && <InstallToast />}
         </div>
       </ToastProvider>
     </StoreProvider>

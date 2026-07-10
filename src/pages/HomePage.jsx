@@ -1,57 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import { useStore } from "../store";
-
-/** 🗺️ Leaflet 청정 지도를 HomePage 내부에 직접 심어줍니다! */
-function CleanLeafletMap() {
-  const mapRef = useRef(null);
-  const mapInstance = useRef(null);
-
-  useEffect(() => {
-    if (mapInstance.current || !mapRef.current) return;
-
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = () => {
-      if (!window.L) return;
-
-      const L = window.L;
-      const centerCoords = [37.4925, 126.9250]; // 🏢 대교타워 위경도
-
-      const map = L.map(mapRef.current).setView(centerCoords, 16);
-      mapInstance.current = map;
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-
-      const marker = L.marker(centerCoords).addTo(map);
-      marker.bindPopup("<b>대교타워 🏢</b>").openPopup();
-    };
-
-    document.head.appendChild(script);
-
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
-    };
-  }, []);
-
-  return (
-    <div className="h-full w-full rounded-lg border border-list-line-100 bg-surface">
-      <div ref={mapRef} className="h-full w-full rounded-lg" style={{ minHeight: "520px" }} />
-    </div>
-  );
-}
+import { useTowerGeo } from "../geo";
+import NaverMap from "../components/NaverMap";
 
 export default function HomePage({ goDetail }) {
   const { restaurantsWithBalance } = useStore();
+  const tower = useTowerGeo();
 
   // 예치금 0원 → 홈에서 가리기, 예치금 많은 순 정렬
   const visible = restaurantsWithBalance()
     .filter((r) => r.balance !== 0)
     .sort((a, b) => b.balance - a.balance);
+
+  // 지도에 표시할 좌표 있는 식당
+  const mapRestaurants = visible.filter(
+    (r) => typeof r.lat === "number" && typeof r.lng === "number"
+  );
 
   // 💡 [자급자족 1] 외부 utils 안 거치고, 금액을 '원' 포맷으로 직접 변경
   const formatMoney = (amount) => {
@@ -83,14 +47,19 @@ export default function HomePage({ goDetail }) {
 
   return (
     <div className="grid gap-token-4 lg:grid-cols-[1fr_360px]">
-      {/* 🗺️ 상단 왼쪽 파란 네모 자리 (청정 지도) */}
+      {/* 🗺️ 상단 왼쪽 지도 자리 (네이버 지도) */}
       <section className="flex min-h-[420px] flex-col gap-token-2">
         <div className="h-[520px] w-full">
-          <CleanLeafletMap />
+          <NaverMap
+            tower={tower}
+            restaurants={mapRestaurants}
+            onSelect={goDetail}
+            zoom={16}
+          />
         </div>
         <div className="flex items-center justify-between">
           <p className="text-caption text-text-muted">
-            오픈스트리트맵(OSM) · 대교타워 기준 실좌표 표시
+            네이버 지도 · 대교타워 기준 실좌표 표시
           </p>
         </div>
       </section>

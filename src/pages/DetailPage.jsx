@@ -1,56 +1,21 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useStore } from "../store";
-import { Button, Table, Badge, Modal, Input, Textarea, Checkbox, useToast, VoteButtons } from "../components";
-import { formatKRW, menuIcon, restaurantIcon, depositStatus, ICON_CHOICES } from "../utils";
+import NaverMap from "../components/NaverMap";
+import { Button, Table, Badge, Modal, Input, Select, Textarea, Checkbox, FileInput, useToast, VoteButtons } from "../components";
+import { formatKRW, menuIcon, restaurantIcon, depositStatus, ICON_CHOICES, commaInput, parseAmount } from "../utils";
 
-/** 🗺️ 상세페이지 전용: 인증키 에러 없는 독립형 청정 미니 지도 컴포넌트 */
+/** 🗺️ 상세페이지 전용: 네이버 지도 기반 미니 지도 (좌표 표시 전용, 조작 비활성) */
 function CleanDetailMiniMap({ restaurant }) {
-  const mapRef = useRef(null);
-  const mapInstance = useRef(null);
-
-  useEffect(() => {
-    if (mapInstance.current || !mapRef.current) return;
-
-    // 식당의 위경도 좌표가 없으면 기본 대교타워 좌표 사용
-    const lat = restaurant.lat ?? 37.4925;
-    const lng = restaurant.lng ?? 126.9250;
-
-    // 동적으로 Leaflet 로드
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = () => {
-      if (!window.L) return;
-
-      const L = window.L;
-      const coords = [lat, lng];
-
-      // 1. 지도 객체 생성 및 포커싱
-      const map = L.map(mapRef.current).setView(coords, 17);
-      mapInstance.current = map;
-
-      // 2. 고화질 지도 타일 깔기
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-
-      // 3. [오타 수정 완료!] 해당 식당 위치에 정확하게 핀 꽂기
-      const marker = L.marker(coords).addTo(map);
-      marker.bindPopup(`<b>${restaurant.name}</b><br>${restaurant.mainMenu || "야근 식당"}`).openPopup();
-    };
-
-    document.head.appendChild(script);
-
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
-    };
-  }, [restaurant]);
+  // 좌표가 없으면 기본 대교타워 좌표 사용
+  const point = {
+    ...restaurant,
+    lat: restaurant.lat ?? 37.4925,
+    lng: restaurant.lng ?? 126.925,
+  };
 
   return (
     <div className="h-full w-full rounded-lg border border-list-line-100 bg-surface overflow-hidden">
-      <div ref={mapRef} className="h-full w-full" style={{ minHeight: "260px" }} />
+      <NaverMap restaurants={[point]} interactive={false} zoom={17} />
     </div>
   );
 }
@@ -165,11 +130,124 @@ function EditModal({ open, onClose, restaurant, onSave }) {
   );
 }
 
+/** 충전/사용 이력 수정 모달 — 이력 행을 2초간 꾹 누르면 열린다 */
+function TransactionEditModal({ open, onClose, transaction, onSave, onDelete }) {
+  const [form, setForm] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (open && transaction) {
+      setForm({
+        type: transaction.type,
+        date: transaction.date ?? "",
+        amount: commaInput(String(transaction.amount ?? "")),
+        user: transaction.user ?? "",
+        memo: transaction.memo ?? "",
+        coupon: !!transaction.coupon,
+        receipt: transaction.receipt ?? null,
+      });
+      setErrors({});
+      setConfirmDelete(false);
+    }
+  }, [open, transaction]);
+
+  if (!form) return null;
+
+  const set = (key) => (e) => {
+    const value = e?.target ? (e.target.type === "checkbox" ? e.target.checked : e.target.value) : e;
+    setForm((f) => ({ ...f, [key]: key === "amount" ? commaInput(value) : value }));
+  };
+
+  const submit = () => {
+    const errs = {};
+    if (!form.date) errs.date = "일자를 입력하세요.";
+    const amount = parseAmount(form.amount);
+    if (amount <= 0) errs.amount = "1원 이상의 금액을 입력하세요.";
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    onSave({
+      type: form.type,
+      date: form.date,
+      amount,
+      user: form.user.trim(),
+      memo: form.memo,
+      coupon: form.coupon,
+      receipt: form.receipt,
+    });
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="이력 수정"
+      width="560px"
+      footer={
+        <>
+          <Button
+            variant="danger"
+            className="mr-auto"
+            onClick={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}
+          >
+            {confirmDelete ? "정말 삭제할까요?" : "삭제"}
+          </Button>
+          <Button variant="secondary" onClick={onClose}>취소</Button>
+          <Button onClick={submit}>저장</Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-token-4">
+        <div className="grid gap-token-4 md:grid-cols-2">
+          <Select
+            label="구분"
+            required
+            value={form.type}
+            onChange={set("type")}
+            options={[
+              { value: "charge", label: "충전" },
+              { value: "use", label: "사용" },
+            ]}
+          />
+          <Input label="일자" required type="date" value={form.date} onChange={set("date")} error={errors.date} />
+        </div>
+        <div className="grid gap-token-4 md:grid-cols-2">
+          <Input
+            label="금액"
+            required
+            inputMode="numeric"
+            suffix="원"
+            value={form.amount}
+            onChange={set("amount")}
+            error={errors.amount}
+          />
+          <Input
+            label="사용자/충전자"
+            placeholder="예: 재광, 동국"
+            value={form.user}
+            onChange={set("user")}
+          />
+        </div>
+        <Checkbox label="🎟️ 쿠폰" checked={form.coupon} onChange={set("coupon")} />
+        <Textarea label="메모" value={form.memo} onChange={set("memo")} />
+        <FileInput label="증빙서류 (영수증 이미지)" value={form.receipt} onChange={set("receipt")} />
+        {confirmDelete && (
+          <p className="rounded-md bg-surface px-token-3 py-token-2 text-caption text-danger">
+            삭제하면 잔액이 다시 계산되고 노션에서도 이력이 보관함으로 이동합니다. 삭제 버튼을 한 번 더
+            누르면 완전히 진행됩니다.
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
   const { state, dispatch, balanceOf, historyOf } = useStore();
   const toast = useToast();
   const [receiptView, setReceiptView] = useState(null); // { src, title }
   const [editOpen, setEditOpen] = useState(false);
+  const [txEdit, setTxEdit] = useState(null); // 수정할 이력 (행 2초 꾹 누르면 설정)
   const [visibleCount, setVisibleCount] = useState(10); // 이력 기본 10건, '더 보기'로 +5
 
   const restaurant = state.restaurants.find((r) => r.id === restaurantId);
@@ -346,11 +424,15 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
         <h3 className="text-header font-bold text-text">
           충전/사용 이력 <span className="text-text-muted">({history.length})</span>
         </h3>
+        <p className="text-caption text-text-muted">
+          ✏️ 이력을 <span className="font-bold">2초간 꾹 누르면</span> 수정할 수 있어요.
+        </p>
         <Table
           columns={columns}
           rows={history.slice(0, visibleCount)}
           minWidth="700px"
           emptyText="이력이 없습니다."
+          onRowLongPress={(t) => setTxEdit(t)}
         />
         {history.length > visibleCount && (
           <div className="flex justify-center">
@@ -371,6 +453,23 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
           dispatch({ type: "UPDATE_RESTAURANT", id: restaurant.id, patch });
           setEditOpen(false);
           toast("가게 정보가 저장되었습니다.");
+        }}
+      />
+
+      {/* 이력 수정/삭제 모달 — 이력 행 2초 길게 누르기 */}
+      <TransactionEditModal
+        open={!!txEdit}
+        onClose={() => setTxEdit(null)}
+        transaction={txEdit}
+        onSave={(patch) => {
+          dispatch({ type: "UPDATE_TRANSACTION", id: txEdit.id, patch });
+          setTxEdit(null);
+          toast("이력이 수정되었습니다. 잔액이 다시 계산됩니다.");
+        }}
+        onDelete={() => {
+          dispatch({ type: "DELETE_TRANSACTION", id: txEdit.id });
+          setTxEdit(null);
+          toast("이력이 삭제되었습니다.", "info");
         }}
       />
 

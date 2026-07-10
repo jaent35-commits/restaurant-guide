@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { geocodeWithVWorld, getVWorldConfig } from "./vworldSdk";
 
 // 실제 좌표(위경도) 관련 상수/유틸
 // 대교타워 주소 — 실좌표는 useTowerGeo() 로 지오코딩해서 사용한다
@@ -29,12 +28,7 @@ export function svgToGeo({ x = 500, y = 320 } = {}) {
 
 /* -----------------------------------------------------------------------------
    주소 → 위경도 지오코딩
-   1순위: 브이월드(VWorld) 주소검색 API (지도 설정에 인증키·도메인이 등록된 경우)
-          — 국토교통부 공식 주소 DB 기반이라 네이버/카카오 지도와 좌표가 사실상 일치한다.
-   2순위(폴백, 브이월드 미설정 시에만): OpenStreetMap Nominatim (무료/키 불필요)
-          — 국내 소규모 상가 주소는 데이터가 부실해 위치가 부정확하거나 아예 못 찾을 수 있다.
-   - 같은 주소는 localStorage 에 캐시해 재요청하지 않는다 (Nominatim 사용 정책: 초당 1건 권장)
-   - 둘 다 실패(오프라인/응답 없음 등) 시 null 반환 — 호출측은 기존 좌표를 그대로 유지한다
+   OpenStreetMap Nominatim (무료/키 불필요) 사용
 ----------------------------------------------------------------------------- */
 const GEOCODE_CACHE_KEY = "rnd-geocode-cache-v3";
 
@@ -81,8 +75,7 @@ export async function geocodeAddress(address) {
   const cache = readGeocodeCache();
   if (cache[query]) return cache[query];
 
-  const { key: vworldKey } = getVWorldConfig();
-  const geo = (vworldKey ? await geocodeWithVWorld(query, vworldKey) : null) ?? (await geocodeWithNominatim(query));
+  const geo = await geocodeWithNominatim(query);
   if (!geo) return null;
 
   cache[query] = geo;
