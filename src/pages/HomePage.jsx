@@ -7,13 +7,15 @@ export default function HomePage({ goDetail }) {
   const { restaurantsWithBalance } = useStore();
   const tower = useTowerGeo();
 
-  // 예치금 0원 → 홈에서 가리기, 예치금 많은 순 정렬
-  const visible = restaurantsWithBalance()
+  const all = restaurantsWithBalance();
+
+  // 예치금 0원 → 홈 목록에서 가리기, 예치금 많은 순 정렬
+  const visible = all
     .filter((r) => r.balance !== 0)
     .sort((a, b) => b.balance - a.balance);
 
-  // 지도에 표시할 좌표 있는 식당
-  const mapRestaurants = visible.filter(
+  // 지도에는 좌표가 있는 등록 가게를 모두 표시(상호·잔액 포함)
+  const mapRestaurants = all.filter(
     (r) => typeof r.lat === "number" && typeof r.lng === "number"
   );
 
@@ -64,7 +66,7 @@ export default function HomePage({ goDetail }) {
         </div>
       </section>
 
-      {/* 🔴 상단 오른쪽 빨간 박스 자리 (식당 목록 에러 원천 봉쇄 버전) */}
+      {/* 🔴 상단 오른쪽 식당 목록 */}
       <section className="flex flex-col gap-token-3">
         <h2 className="text-header font-bold text-text">
           등록 식당 <span className="text-text-muted">({visible.length})</span>
@@ -82,11 +84,10 @@ export default function HomePage({ goDetail }) {
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-header">
                     {getIcon(r.mainMenu || r.name)}
                   </span>
-                  
+
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-token-2">
                       <span className="truncate text-body2 font-bold text-text">{r.name}</span>
-                      {/* 잔액이 0보다 작으면 외상 뱃지 표시 */}
                       {r.balance < 0 && (
                         <span className="rounded bg-red-100 px-1.5 py-0.5 text-caption font-medium text-red-800">
                           외상
@@ -96,7 +97,6 @@ export default function HomePage({ goDetail }) {
                     <span className="block truncate text-caption text-text-muted">{r.mainMenu}</span>
                   </span>
 
-                  {/* 돈 포맷팅 적용 */}
                   <span
                     className={`shrink-0 text-body2 font-bold ${
                       r.balance < 0 ? "text-danger" : "text-primary-400"

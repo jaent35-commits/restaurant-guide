@@ -4,7 +4,7 @@ import NaverMap from "../components/NaverMap";
 import { Button, Table, Badge, Modal, Input, Select, Textarea, Checkbox, FileInput, useToast, VoteButtons } from "../components";
 import { formatKRW, menuIcon, restaurantIcon, depositStatus, ICON_CHOICES, commaInput, parseAmount } from "../utils";
 
-/** 🗺️ 상세페이지 전용: 네이버 지도 기반 미니 지도 (좌표 표시 전용, 조작 비활성) */
+/** 🗺️ 상세페이지 전용: 네이버 지도 기반 미니 지도 (이동·확대 가능) */
 function CleanDetailMiniMap({ restaurant }) {
   // 좌표가 없으면 기본 대교타워 좌표 사용
   const point = {
@@ -15,7 +15,7 @@ function CleanDetailMiniMap({ restaurant }) {
 
   return (
     <div className="h-full w-full rounded-lg border border-list-line-100 bg-surface overflow-hidden">
-      <NaverMap restaurants={[point]} interactive={false} zoom={17} />
+      <NaverMap restaurants={[point]} interactive zoom={17} />
     </div>
   );
 }

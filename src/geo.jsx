@@ -83,6 +83,80 @@ export async function geocodeAddress(address) {
   return geo;
 }
 
+/** 한국 영역의 위경도인지 대략 검증(잘못 뒤바뀐 값/오탐 방지) */
+function isKoreaLatLng(lat, lng) {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= 33 &&
+    lat <= 39 &&
+    lng >= 124 &&
+    lng <= 132
+  );
+}
+
+/**
+ * 지도 공유 링크(구글/네이버/카카오 등)에 박혀 있는 위경도를 직접 추출한다.
+ * 좌표가 URL 에 없으면(단축 링크 등) null 을 반환한다.
+ */
+export function parseCoordsFromUrl(url) {
+  const u = (url || "").trim();
+  if (!u) return null;
+
+  const tryPair = (a, b) => {
+    // (lat,lng) 또는 (lng,lat) 두 순서 모두 시도
+    const n1 = parseFloat(a);
+    const n2 = parseFloat(b);
+    if (isKoreaLatLng(n1, n2)) return { lat: n1, lng: n2 };
+    if (isKoreaLatLng(n2, n1)) return { lat: n2, lng: n1 };
+    return null;
+  };
+
+  const patterns = [
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/, // 구글: @lat,lng
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, // 구글 상세: !3dlat!4dlng
+    /[?&#/]c=(-?\d+\.\d+),(-?\d+\.\d+)/, // 네이버: c=lng,lat
+    /[?&](?:lat|y)=(-?\d+\.\d+)[^]*?[?&](?:lng|lon|x)=(-?\d+\.\d+)/i,
+    /[?&](?:lng|lon|x)=(-?\d+\.\d+)[^]*?[?&](?:lat|y)=(-?\d+\.\d+)/i,
+    /(-?\d{2}\.\d{3,})[,\s/]+(-?\d{2,3}\.\d{3,})/, // 일반 "lat,lng" 쌍
+  ];
+
+  for (const re of patterns) {
+    const m = u.match(re);
+    if (m) {
+      const hit = tryPair(m[1], m[2]);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+/**
+ * 식당 좌표 해석 — 우선순위:
+ *  1) 입력한 주소(address) → 지오코딩
+ *  2) 위치 링크(locationUrl) 안에 박힌 좌표 추출
+ *  3) 링크가 URL 이 아니라 주소 텍스트면 → 지오코딩
+ */
+export async function resolveRestaurantCoords({ address, locationUrl } = {}) {
+  const addr = (address || "").trim();
+  if (addr) {
+    const geo = await geocodeAddress(addr);
+    if (geo) return geo;
+  }
+
+  const url = (locationUrl || "").trim();
+  if (url) {
+    const fromUrl = parseCoordsFromUrl(url);
+    if (fromUrl) return fromUrl;
+    // 링크 형태가 아니면 주소 텍스트로 간주해 지오코딩 시도
+    if (!/^https?:\/\//i.test(url)) {
+      const geo = await geocodeAddress(url);
+      if (geo) return geo;
+    }
+  }
+  return null;
+}
+
 /**
  * 대교타워 실좌표 훅 — 최초 렌더는 근사값(TOWER)으로 보여주고,
  * 백그라운드에서 TOWER_ADDRESS 를 지오코딩해 실좌표로 갱신한다.

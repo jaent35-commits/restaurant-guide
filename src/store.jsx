@@ -5,7 +5,7 @@
 //   영수증 이미지와 내 투표(myVote)는 기기별 localStorage 에만 보관한다.
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import { uid } from "./utils";
-import { SEED_GEO, svgToGeo, geocodeAddress } from "./geo";
+import { SEED_GEO, svgToGeo, resolveRestaurantCoords } from "./geo";
 import {
   apiEnabled,
   fetchData,
@@ -489,28 +489,34 @@ export function StoreProvider({ children }) {
   }, [state]);
 
   /**
-   * 주소 기반 자동 지오코딩 — 식당의 위치(주소)가 새로 입력/수정되면
-   * 지도 좌표(lat/lng)를 자동으로 계산해 채운다 (OpenStreetMap Nominatim, 무료/키 불필요).
-   * geocodedFrom 에 마지막으로 지오코딩한 주소를 기록해, 주소가 바뀌지 않으면 재요청하지 않는다.
-   * 실패해도 기존 좌표(대략 위치)는 그대로 유지된다.
-   * 한 번에 하나씩만 처리(re-render 시 다음 대상으로 자연 진행)하고 요청 사이 간격을 둬
-   * Nominatim 사용 정책(초당 1건 권장)을 지킨다.
+   * 주소/링크 기반 자동 지오코딩 — 식당에 입력된 주소 또는 위치 링크가 새로 입력/수정되면
+   * 지도 좌표(lat/lng)를 자동으로 계산해 채운다.
+   *   1순위: 주소(address) → Nominatim 지오코딩
+   *   2순위: 위치 링크(locationUrl) 안에 박힌 좌표 추출 (구글/네이버/카카오 등)
+   * geocodedFrom 에 마지막 사용 소스(주소 또는 링크)를 기록해, 값이 안 바뀌면 재요청하지 않는다.
+   * 실패해도 기존 좌표는 그대로 유지된다. 한 번에 하나씩 처리하고 요청 간격(1.1s)을 둔다.
    */
   useEffect(() => {
-    const target = state.restaurants.find(
-      (r) => r.address && r.address.trim() && r.geocodedFrom !== r.address
-    );
+    const sourceOf = (r) => (r.address && r.address.trim()) || (r.locationUrl && r.locationUrl.trim()) || "";
+    const target = state.restaurants.find((r) => {
+      const src = sourceOf(r);
+      return src && r.geocodedFrom !== src;
+    });
     if (!target) return undefined;
 
+    const src = sourceOf(target);
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const geo = await geocodeAddress(target.address);
+      const geo = await resolveRestaurantCoords({
+        address: target.address,
+        locationUrl: target.locationUrl,
+      });
       if (cancelled) return;
       dispatch({
         type: "UPDATE_RESTAURANT",
         id: target.id,
-        // 지오코딩 성공 시에만 좌표 갱신, 실패해도 재시도 방지를 위해 geocodedFrom 은 기록
-        patch: { ...(geo || {}), geocodedFrom: target.address },
+        // 좌표 해석 성공 시에만 갱신, 실패해도 재시도 방지를 위해 geocodedFrom 은 기록
+        patch: { ...(geo || {}), geocodedFrom: src },
       });
     }, 1100);
 
