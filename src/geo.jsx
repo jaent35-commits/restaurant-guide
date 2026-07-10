@@ -6,6 +6,21 @@ export const TOWER_ADDRESS = "서울시 관악구 보라매로3길 23";
 // 지오코딩 실패/오프라인 시에만 쓰는 폴백(근사) 좌표
 export const TOWER = { lat: 37.4901, lng: 126.9208 };
 
+// 서비스 지역(대교타워=관악구 인근) 바운딩 박스 — 이 밖의 좌표는 오지오코딩으로 간주
+export const GEO_BOUNDS = { minLat: 37.44, maxLat: 37.54, minLng: 126.86, maxLng: 126.98 };
+
+/** 좌표가 서비스 지역(관악구 인근) 안에 있는지 */
+export function inServiceArea(lat, lng) {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= GEO_BOUNDS.minLat &&
+    lat <= GEO_BOUNDS.maxLat &&
+    lng >= GEO_BOUNDS.minLng &&
+    lng <= GEO_BOUNDS.maxLng
+  );
+}
+
 /** 시드 식당의 실좌표 폴백 (지오코딩 전/실패 시 임시로 쓰는 근사값) */
 export const SEED_GEO = {
   r_jopro: { lat: 37.4928, lng: 126.9245 },
@@ -28,9 +43,9 @@ export function svgToGeo({ x = 500, y = 320 } = {}) {
 
 /* -----------------------------------------------------------------------------
    주소 → 위경도 지오코딩
-   OpenStreetMap Nominatim (무료/키 불필요) 사용
+   OpenStreetMap Nominatim (무료/키 불필요) 사용 — 관악구 인근으로 검색 범위 제한
 ----------------------------------------------------------------------------- */
-const GEOCODE_CACHE_KEY = "rnd-geocode-cache-v3";
+const GEOCODE_CACHE_KEY = "rnd-geocode-cache-v4";
 
 function readGeocodeCache() {
   try {
@@ -48,11 +63,23 @@ function writeGeocodeCache(cache) {
   }
 }
 
+/** 지오코딩 정확도를 높이기 위해 층/호/건물부가정보 등 노이즈 토큰 제거 */
+function normalizeAddress(query) {
+  return (query || "")
+    .replace(/\s*(지하|B)?\s*\d+\s*층/gi, " ") // 1층 / 지하2층 등
+    .replace(/\s*\d+\s*호(?!선)/g, " ") // 101호 (지하철 N호선은 제외)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function geocodeWithNominatim(query) {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&q=${encodeURIComponent(
-      query
-    )}`;
+    const cleaned = normalizeAddress(query) || query;
+    // viewbox: 좌상(lng,lat) → 우하(lng,lat), bounded=1 로 박스 밖 결과 배제
+    const viewbox = `${GEO_BOUNDS.minLng},${GEO_BOUNDS.maxLat},${GEO_BOUNDS.maxLng},${GEO_BOUNDS.minLat}`;
+    const url =
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr` +
+      `&viewbox=${viewbox}&bounded=1&q=${encodeURIComponent(cleaned)}`;
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     if (!res.ok) return null;
     const rows = await res.json();
@@ -61,7 +88,8 @@ async function geocodeWithNominatim(query) {
 
     const lat = parseFloat(hit.lat);
     const lng = parseFloat(hit.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    // 서비스 지역을 벗어난 결과는 오지오코딩으로 보고 버린다(폴백 좌표 유지)
+    if (!inServiceArea(lat, lng)) return null;
     return { lat, lng };
   } catch {
     return null;

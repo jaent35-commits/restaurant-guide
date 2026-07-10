@@ -5,7 +5,7 @@
 //   영수증 이미지와 내 투표(myVote)는 기기별 localStorage 에만 보관한다.
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import { uid } from "./utils";
-import { SEED_GEO, svgToGeo, resolveRestaurantCoords } from "./geo";
+import { SEED_GEO, svgToGeo, resolveRestaurantCoords, inServiceArea } from "./geo";
 import {
   apiEnabled,
   fetchData,
@@ -205,9 +205,18 @@ function seedData() {
 
 /** 위경도가 없는 식당(구버전 저장본/신규)에 실좌표 채우기 */
 function ensureCoords(r) {
-  if (typeof r.lat === "number" && typeof r.lng === "number") return r;
-  const geo = SEED_GEO[r.id] ?? svgToGeo(r.position);
-  return { ...r, ...geo };
+  const fallback = SEED_GEO[r.id] ?? svgToGeo(r.position);
+  // 좌표가 없으면 폴백으로 채운다
+  if (typeof r.lat !== "number" || typeof r.lng !== "number") {
+    return { ...r, ...fallback };
+  }
+  // 서비스 지역(관악구 인근)을 벗어난 좌표 = 잘못 지오코딩된 값 →
+  // 폴백으로 교정하고 geocodedFrom 을 지워 다음 렌더에서 다시 지오코딩하도록 유도
+  if (!inServiceArea(r.lat, r.lng)) {
+    const { geocodedFrom, ...rest } = r;
+    return { ...rest, ...fallback };
+  }
+  return r;
 }
 
 function loadInitial() {
