@@ -15,7 +15,7 @@ function CleanDetailMiniMap({ restaurant }) {
 
   return (
     <div className="h-full w-full rounded-lg border border-list-line-100 bg-surface overflow-hidden">
-      <NaverMap restaurants={[point]} interactive zoom={17} />
+      <NaverMap restaurants={[point]} interactive zoom={17} showBalance={false} />
     </div>
   );
 }

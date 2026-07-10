@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // 실제 좌표(위경도) 관련 상수/유틸
 // 대교타워 주소 — 실좌표는 useTowerGeo() 로 지오코딩해서 사용한다
-export const TOWER_ADDRESS = "서울시 관악구 보라매로3길 23 7층";
+export const TOWER_ADDRESS = "서울시 관악구 보라매로3길 23";
 // 지오코딩 실패/오프라인 시에만 쓰는 폴백(근사) 좌표
 export const TOWER = { lat: 37.4901, lng: 126.9208 };
 

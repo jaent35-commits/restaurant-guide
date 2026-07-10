@@ -2,15 +2,18 @@ import React, { useEffect, useRef, useState } from "react";
 import { loadNaverMaps, getNaverConfig } from "../naverSdk";
 import { formatKRW, restaurantIcon, depositStatus } from "../utils";
 
-/** 식당 마커 HTML — 홈 전체지도/미니맵 공통 */
-export function markerHtml(r) {
+/** 식당 마커 HTML — 홈 전체지도/미니맵 공통 (showBalance=false 면 잔액 숨김) */
+export function markerHtml(r, showBalance = true) {
   const status = depositStatus(r.balance);
+  const balance = showBalance
+    ? `<span class="${r.balance < 0 ? "is-credit" : ""}">${formatKRW(r.balance)}</span>`
+    : "";
   return `
     <div class="map-marker${status.key === "credit" ? " map-marker--credit" : ""}">
       <div class="map-marker__icon">${restaurantIcon(r)}</div>
       <div class="map-marker__label">
         <strong>${r.name}</strong>
-        <span class="${r.balance < 0 ? "is-credit" : ""}">${formatKRW(r.balance)}</span>
+        ${balance}
       </div>
     </div>`;
 }
@@ -34,6 +37,7 @@ function htmlIcon(naver, html, onClick) {
  * 네이버 지도(JS API v3) 기반 실좌표 지도
  * - tower 를 넘기면 대교타워 마커도 함께 표시(홈 화면 전체 지도용)
  * - interactive=false 면 이동/줌 등 조작을 막고 좌표만 보여준다(상세 화면 미니맵용)
+ * - showBalance=false 면 식당 마커에서 잔액을 숨긴다(상세 화면 미니맵용)
  * - clientId 를 안 넘기면 localStorage/환경변수에 등록된 값을 사용한다
  */
 export default function NaverMap({
@@ -41,6 +45,7 @@ export default function NaverMap({
   tower,
   onSelect,
   interactive = true,
+  showBalance = true,
   zoom = 16,
   clientId,
   onError,
@@ -97,7 +102,7 @@ export default function NaverMap({
         if (tower) addMarker(tower, towerHtml);
         restaurants.forEach((r) => {
           if (typeof r.lat !== "number" || typeof r.lng !== "number") return;
-          addMarker(r, markerHtml(r), interactive ? () => onSelectRef.current?.(r.id) : undefined);
+          addMarker(r, markerHtml(r, showBalance), interactive ? () => onSelectRef.current?.(r.id) : undefined);
         });
       })
       .catch((err) => {
@@ -116,7 +121,7 @@ export default function NaverMap({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, restaurants, tower, interactive, zoom]);
+  }, [key, restaurants, tower, interactive, showBalance, zoom]);
 
   if (!key) {
     return (
