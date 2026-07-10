@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { geocodeWithNaver } from "./naverSdk";
 
 // 실제 좌표(위경도) 관련 상수/유틸
 // 대교타워 주소 — 실좌표는 useTowerGeo() 로 지오코딩해서 사용한다
@@ -6,10 +7,12 @@ export const TOWER_ADDRESS = "서울시 관악구 보라매로3길 23";
 // 지오코딩 실패/오프라인 시에만 쓰는 폴백(근사) 좌표
 export const TOWER = { lat: 37.4901, lng: 126.9208 };
 
-// 서비스 지역(대교타워=관악구 인근) 바운딩 박스 — 이 밖의 좌표는 오지오코딩으로 간주
-export const GEO_BOUNDS = { minLat: 37.44, maxLat: 37.54, minLng: 126.86, maxLng: 126.98 };
+// 서비스 지역(서울 및 인근) 바운딩 박스 — 이 밖의 좌표는 명백한 오지오코딩으로 간주해 교정
+export const GEO_BOUNDS = { minLat: 37.35, maxLat: 37.75, minLng: 126.70, maxLng: 127.25 };
+// Nominatim(폴백) 검색을 좁히기 위한 관악구 인근 뷰박스
+const NOMINATIM_BOUNDS = { minLat: 37.44, maxLat: 37.54, minLng: 126.86, maxLng: 126.98 };
 
-/** 좌표가 서비스 지역(관악구 인근) 안에 있는지 */
+/** 좌표가 서비스 지역(서울 인근) 안에 있는지 */
 export function inServiceArea(lat, lng) {
   return (
     Number.isFinite(lat) &&
@@ -43,9 +46,9 @@ export function svgToGeo({ x = 500, y = 320 } = {}) {
 
 /* -----------------------------------------------------------------------------
    주소 → 위경도 지오코딩
-   OpenStreetMap Nominatim (무료/키 불필요) 사용 — 관악구 인근으로 검색 범위 제한
+   1순위: 네이버 지오코더(한국 주소 정확) / 2순위: OpenStreetMap Nominatim(관악구 제한)
 ----------------------------------------------------------------------------- */
-const GEOCODE_CACHE_KEY = "rnd-geocode-cache-v4";
+const GEOCODE_CACHE_KEY = "rnd-geocode-cache-v5";
 
 function readGeocodeCache() {
   try {
@@ -63,7 +66,7 @@ function writeGeocodeCache(cache) {
   }
 }
 
-/** 지오코딩 정확도를 높이기 위해 층/호/건물부가정보 등 노이즈 토큰 제거 */
+/** 지오코딩 정확도를 높이기 위해 층/호 등 노이즈 토큰 제거 */
 function normalizeAddress(query) {
   return (query || "")
     .replace(/\s*(지하|B)?\s*\d+\s*층/gi, " ") // 1층 / 지하2층 등
@@ -75,8 +78,8 @@ function normalizeAddress(query) {
 async function geocodeWithNominatim(query) {
   try {
     const cleaned = normalizeAddress(query) || query;
-    // viewbox: 좌상(lng,lat) → 우하(lng,lat), bounded=1 로 박스 밖 결과 배제
-    const viewbox = `${GEO_BOUNDS.minLng},${GEO_BOUNDS.maxLat},${GEO_BOUNDS.maxLng},${GEO_BOUNDS.minLat}`;
+    const b = NOMINATIM_BOUNDS;
+    const viewbox = `${b.minLng},${b.maxLat},${b.maxLng},${b.minLat}`;
     const url =
       `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr` +
       `&viewbox=${viewbox}&bounded=1&q=${encodeURIComponent(cleaned)}`;
@@ -88,7 +91,6 @@ async function geocodeWithNominatim(query) {
 
     const lat = parseFloat(hit.lat);
     const lng = parseFloat(hit.lon);
-    // 서비스 지역을 벗어난 결과는 오지오코딩으로 보고 버린다(폴백 좌표 유지)
     if (!inServiceArea(lat, lng)) return null;
     return { lat, lng };
   } catch {
@@ -103,7 +105,10 @@ export async function geocodeAddress(address) {
   const cache = readGeocodeCache();
   if (cache[query]) return cache[query];
 
-  const geo = await geocodeWithNominatim(query);
+  // 1순위: 네이버 지오코더(정확) → 2순위: Nominatim(관악구 제한)
+  let geo = await geocodeWithNaver(query);
+  if (geo && !inServiceArea(geo.lat, geo.lng)) geo = null; // 명백한 이상치 방어
+  if (!geo) geo = await geocodeWithNominatim(query);
   if (!geo) return null;
 
   cache[query] = geo;
@@ -132,7 +137,6 @@ export function parseCoordsFromUrl(url) {
   if (!u) return null;
 
   const tryPair = (a, b) => {
-    // (lat,lng) 또는 (lng,lat) 두 순서 모두 시도
     const n1 = parseFloat(a);
     const n2 = parseFloat(b);
     if (isKoreaLatLng(n1, n2)) return { lat: n1, lng: n2 };
@@ -161,7 +165,7 @@ export function parseCoordsFromUrl(url) {
 
 /**
  * 식당 좌표 해석 — 우선순위:
- *  1) 입력한 주소(address) → 지오코딩
+ *  1) 입력한 주소(address) → 지오코딩(네이버→Nominatim)
  *  2) 위치 링크(locationUrl) 안에 박힌 좌표 추출
  *  3) 링크가 URL 이 아니라 주소 텍스트면 → 지오코딩
  */
@@ -176,7 +180,6 @@ export async function resolveRestaurantCoords({ address, locationUrl } = {}) {
   if (url) {
     const fromUrl = parseCoordsFromUrl(url);
     if (fromUrl) return fromUrl;
-    // 링크 형태가 아니면 주소 텍스트로 간주해 지오코딩 시도
     if (!/^https?:\/\//i.test(url)) {
       const geo = await geocodeAddress(url);
       if (geo) return geo;

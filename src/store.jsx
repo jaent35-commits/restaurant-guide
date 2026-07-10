@@ -506,14 +506,21 @@ export function StoreProvider({ children }) {
    * 실패해도 기존 좌표는 그대로 유지된다. 한 번에 하나씩 처리하고 요청 간격(1.1s)을 둔다.
    */
   useEffect(() => {
+    // v2: 네이버 지오코더 도입 — geocodedFrom 에 버전 접두사를 붙여, 기존에 부정확하게
+    //     지오코딩된 좌표도 한 번은 다시 계산하도록 강제한다.
+    const GEO_VER = "v2";
     const sourceOf = (r) => (r.address && r.address.trim()) || (r.locationUrl && r.locationUrl.trim()) || "";
-    const target = state.restaurants.find((r) => {
+    const keyOf = (r) => {
       const src = sourceOf(r);
-      return src && r.geocodedFrom !== src;
+      return src ? `${GEO_VER}:${src}` : "";
+    };
+    const target = state.restaurants.find((r) => {
+      const key = keyOf(r);
+      return key && r.geocodedFrom !== key;
     });
     if (!target) return undefined;
 
-    const src = sourceOf(target);
+    const src = keyOf(target);
     let cancelled = false;
     const timer = setTimeout(async () => {
       const geo = await resolveRestaurantCoords({
