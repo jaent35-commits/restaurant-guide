@@ -44,6 +44,9 @@ export default function FileInput({ label, required, error, value, onChange, cla
           )}
         </div>
       </div>
+      <p className="mt-token-1 text-caption text-text-muted">
+        ※ 이 이미지는 서버에 저장되지 않으며, 올린 사람의 기기(갤러리)에만 보관되어 표시됩니다.
+      </p>
     </Field>
   );
 }

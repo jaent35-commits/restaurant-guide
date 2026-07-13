@@ -111,14 +111,14 @@ function EditModal({ open, onClose, restaurant, onSave }) {
         </div>
         <Input
           label="위치 — 주소"
-          placeholder="예: 서울 관악구 보라매로 인근"
+          placeholder="정확한 주소를 입력해 주세요 (예: 서울 관악구 당곡길 66 1층)"
           value={form.address}
           onChange={set("address")}
         />
         <Input
           label="위치 — 링크(URL)"
           type="url"
-          placeholder="https://share.google/..."
+          placeholder="네이버 지도 URL을 입력해 주세요 (예: https://naver.me/xxxxxxx)"
           value={form.locationUrl}
           onChange={set("locationUrl")}
         />
@@ -242,9 +242,25 @@ function TransactionEditModal({ open, onClose, transaction, onSave, onDelete }) 
   );
 }
 
+/** 터치 기기 여부 (태블릿/모바일=coarse). 데스크톱(마우스)=false */
+function useIsTouch() {
+  const [isTouch, setIsTouch] = useState(
+    () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia?.("(pointer: coarse)");
+    if (!mq) return undefined;
+    const onChange = () => setIsTouch(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return isTouch;
+}
+
 export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
   const { state, dispatch, balanceOf, historyOf } = useStore();
   const toast = useToast();
+  const isTouch = useIsTouch();
   const [receiptView, setReceiptView] = useState(null); // { src, title }
   const [editOpen, setEditOpen] = useState(false);
   const [txEdit, setTxEdit] = useState(null); // 수정할 이력 (행 2초 꾹 누르면 설정)
@@ -425,14 +441,19 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
           충전/사용 이력 <span className="text-text-muted">({history.length})</span>
         </h3>
         <p className="text-caption text-text-muted">
-          ✏️ 이력을 <span className="font-bold">2초간 꾹 누르면</span> 수정할 수 있어요.
+          {isTouch ? (
+            <>✏️ 이력을 <span className="font-bold">2초간 꾹 누르면</span> 수정할 수 있어요.</>
+          ) : (
+            <>✏️ 이력을 <span className="font-bold">클릭하면</span> 수정할 수 있어요.</>
+          )}
         </p>
         <Table
           columns={columns}
           rows={history.slice(0, visibleCount)}
           minWidth="700px"
           emptyText="이력이 없습니다."
-          onRowLongPress={(t) => setTxEdit(t)}
+          onRowClick={isTouch ? undefined : (t) => setTxEdit(t)}
+          onRowLongPress={isTouch ? (t) => setTxEdit(t) : undefined}
         />
         {history.length > visibleCount && (
           <div className="flex justify-center">

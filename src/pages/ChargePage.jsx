@@ -235,14 +235,14 @@ export default function ChargePage({ initialRestaurantId, goDetail }) {
 
         <Input
           label="위치 — 주소"
-          placeholder="예: 서울 관악구 보라매로 인근"
+          placeholder="정확한 주소를 입력해 주세요 (예: 서울 관악구 당곡길 66 1층)"
           value={form.address}
           onChange={set("address")}
         />
         <Input
           label="위치 — 링크(URL)"
           type="url"
-          placeholder="https://share.google/..."
+          placeholder="네이버 지도 URL을 입력해 주세요 (예: https://naver.me/xxxxxxx)"
           value={form.locationUrl}
           onChange={set("locationUrl")}
         />

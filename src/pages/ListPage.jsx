@@ -28,13 +28,16 @@ function ExternalIcon() {
 export default function ListPage({ goDetail }) {
   const { restaurantsWithBalance, dispatch } = useStore();
   const [query, setQuery] = useState("");
+  const [excludeCoupon, setExcludeCoupon] = useState(false);
   // 헤더 클릭 정렬 (기본: 예치금 많은 순)
   const [sort, setSort] = useState({ key: "balance", dir: "desc" });
 
-  // 가게 상호 / 주요 메뉴 검색
+  // 가게 상호 / 주요 메뉴 검색 (+ '쿠폰 제외' 시 쿠폰 식당 숨김)
   const q = query.trim();
   const filtered = restaurantsWithBalance().filter(
-    (r) => !q || r.name.includes(q) || r.mainMenu.includes(q)
+    (r) =>
+      (!q || r.name.includes(q) || r.mainMenu.includes(q)) &&
+      (!excludeCoupon || !r.coupon)
   );
 
   const rows = [...filtered].sort((a, b) => {
@@ -67,7 +70,6 @@ export default function ListPage({ goDetail }) {
         <span className="flex items-center gap-token-2">
           <span className="text-body1">{restaurantIcon(r)}</span>
           {r.locationUrl ? (
-            // 상호 클릭 → 위치 링크 새창 열림 (모바일에서 주소란 숨김 대응)
             <a
               href={r.locationUrl}
               target="_blank"
@@ -100,20 +102,20 @@ export default function ListPage({ goDetail }) {
       key: "mainMenu",
       header: `주요 메뉴${arrow("mainMenu")}`,
       sortable: true,
-      className: "hidden md:table-cell", // 모바일 숨김
+      className: "hidden md:table-cell",
     },
     {
       key: "address",
       header: `위치(주소)${arrow("address")}`,
       sortable: true,
-      className: "hidden lg:table-cell", // 태블릿/모바일 숨김 (링크는 상호 클릭으로 대체)
+      className: "hidden lg:table-cell",
       render: (r) => r.address || "-",
     },
     {
       key: "status",
       header: `상태${arrow("status")}`,
       sortable: true,
-      className: "hidden md:table-cell", // 모바일 숨김
+      className: "hidden md:table-cell",
       render: (r) => {
         const s = depositStatus(r.balance);
         return <Badge tone={s.key}>{s.label}</Badge>;
@@ -144,12 +146,26 @@ export default function ListPage({ goDetail }) {
     <div className="flex flex-col gap-token-4">
       <div className="flex flex-wrap items-end justify-between gap-token-3">
         <h2 className="text-header font-bold text-text">식당 정보</h2>
-        <Input
-          placeholder="가게 상호 또는 주요 메뉴 검색"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-72"
-        />
+        <div className="flex items-center gap-token-2">
+          <button
+            type="button"
+            aria-pressed={excludeCoupon}
+            onClick={() => setExcludeCoupon((v) => !v)}
+            className={`shrink-0 rounded-full border px-token-3 py-token-1 text-caption font-bold transition-colors ${
+              excludeCoupon
+                ? "border-primary-300 bg-primary-100 text-primary-400"
+                : "border-border text-text-muted hover:border-primary-200"
+            }`}
+          >
+            🎟️ 쿠폰 제외
+          </button>
+          <Input
+            placeholder="가게 상호 또는 주요 메뉴 검색"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-72"
+          />
+        </div>
       </div>
 
       <Table

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useStore } from "../store";
 import { useTowerGeo } from "../geo";
 import NaverMap from "../components/NaverMap";
@@ -6,12 +6,13 @@ import NaverMap from "../components/NaverMap";
 export default function HomePage({ goDetail }) {
   const { restaurantsWithBalance } = useStore();
   const tower = useTowerGeo();
+  const [excludeCoupon, setExcludeCoupon] = useState(false);
 
   const all = restaurantsWithBalance();
 
-  // 예치금 0원 → 홈 목록에서 가리기, 예치금 많은 순 정렬
+  // 예치금 0원 → 홈 목록에서 가리기, ('쿠폰 제외' 시 쿠폰 식당 숨김), 예치금 많은 순 정렬
   const visible = all
-    .filter((r) => r.balance !== 0)
+    .filter((r) => r.balance !== 0 && (!excludeCoupon || !r.coupon))
     .sort((a, b) => b.balance - a.balance);
 
   // 지도에는 좌표가 있는 '활성' 가게만 표시(예치금 0원=비활성 가게는 숨김)
@@ -19,12 +20,12 @@ export default function HomePage({ goDetail }) {
     (r) => r.balance !== 0 && typeof r.lat === "number" && typeof r.lng === "number"
   );
 
-  // 💡 [자급자족 1] 외부 utils 안 거치고, 금액을 '원' 포맷으로 직접 변경
+  // 금액을 '원' 포맷으로 직접 변경
   const formatMoney = (amount) => {
     return `${Number(amount).toLocaleString("ko-KR")}원`;
   };
 
-  // 💡 [자급자족 2] 외부 함수 없이, 식당 메뉴 이름에 따라 이모지 아이콘 자동 매칭
+  // 식당 메뉴 이름에 따라 이모지 아이콘 자동 매칭
   const getIcon = (menu = "") => {
     const rules = [
       [/(감자탕|탕|국밥|찌개|전골)/, "🍲"],
@@ -49,7 +50,7 @@ export default function HomePage({ goDetail }) {
 
   return (
     <div className="grid gap-token-4 lg:grid-cols-[1fr_360px]">
-      {/* 🗺️ 상단 왼쪽 지도 자리 (네이버 지도) */}
+      {/* 상단 왼쪽 지도 (네이버 지도) */}
       <section className="flex min-h-[420px] flex-col gap-token-2">
         <div className="h-[520px] w-full">
           <NaverMap
@@ -66,11 +67,25 @@ export default function HomePage({ goDetail }) {
         </div>
       </section>
 
-      {/* 🔴 상단 오른쪽 식당 목록 */}
+      {/* 상단 오른쪽 식당 목록 */}
       <section className="flex flex-col gap-token-3">
-        <h2 className="text-header font-bold text-text">
-          등록 식당 <span className="text-text-muted">({visible.length})</span>
-        </h2>
+        <div className="flex items-center justify-between gap-token-2">
+          <h2 className="text-header font-bold text-text">
+            등록 식당 <span className="text-text-muted">({visible.length})</span>
+          </h2>
+          <button
+            type="button"
+            aria-pressed={excludeCoupon}
+            onClick={() => setExcludeCoupon((v) => !v)}
+            className={`shrink-0 rounded-full border px-token-3 py-token-1 text-caption font-bold transition-colors ${
+              excludeCoupon
+                ? "border-primary-300 bg-primary-100 text-primary-400"
+                : "border-border text-text-muted hover:border-primary-200"
+            }`}
+          >
+            🎟️ 쿠폰 제외
+          </button>
+        </div>
         <ul className="flex flex-col gap-token-2">
           {visible.map((r) => {
             return (
@@ -84,7 +99,6 @@ export default function HomePage({ goDetail }) {
                       : "border border-list-line-100 hover:border-primary-300"
                   }`}
                 >
-                  {/* 이모지 매칭 적용 */}
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-header">
                     {getIcon(r.mainMenu || r.name)}
                   </span>
