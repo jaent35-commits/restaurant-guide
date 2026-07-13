@@ -76,7 +76,10 @@ export default function Table({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-list-line-100 bg-gray-100">
-      <table className="w-full border-collapse text-body2" style={minWidth ? { minWidth } : undefined}>
+      <table
+        className="w-full border-collapse text-body2"
+        style={minWidth ? { minWidth } : undefined}
+      >
         <thead>
           <tr className="bg-list-bg-200 text-center text-caption text-text-muted">
             {columns.map((c) => (
@@ -84,7 +87,9 @@ export default function Table({
                 key={c.key}
                 onClick={c.sortable && onHeaderClick ? () => onHeaderClick(c.key) : undefined}
                 className={`whitespace-nowrap px-token-4 py-token-3 font-bold ${
-                  c.sortable && onHeaderClick ? "cursor-pointer select-none hover:text-primary-400" : ""
+                  c.sortable && onHeaderClick
+                    ? "cursor-pointer select-none hover:text-primary-400"
+                    : ""
                 } ${c.className ?? ""}`}
               >
                 {c.header}
@@ -95,7 +100,10 @@ export default function Table({
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={columns.length} className="px-token-4 py-token-6 text-center text-text-muted">
+              <td
+                colSpan={columns.length}
+                className="px-token-4 py-token-6 text-center text-text-muted"
+              >
                 {emptyText}
               </td>
             </tr>

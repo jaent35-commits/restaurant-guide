@@ -51,7 +51,12 @@ export default function KakaoMap({ appKey, restaurants, onSelect, onError, tower
         const bounds = new kakao.maps.LatLngBounds();
         bounds.extend(center);
         overlays.push(
-          new kakao.maps.CustomOverlay({ position: center, content: towerElement(), yAnchor: 0.5, zIndex: 2 })
+          new kakao.maps.CustomOverlay({
+            position: center,
+            content: towerElement(),
+            yAnchor: 0.5,
+            zIndex: 2,
+          })
         );
 
         restaurants.forEach((r) => {

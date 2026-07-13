@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useStore } from "../store";
 import { Button, Input, Select, Textarea, Checkbox, FileInput, useToast } from "../components";
-import { commaInput, parseAmount, todayStr, uid, formatKRW, menuIcon, restaurantIcon } from "../utils";
+import {
+  commaInput,
+  parseAmount,
+  todayStr,
+  uid,
+  formatKRW,
+  menuIcon,
+  restaurantIcon,
+} from "../utils";
 import { svgToGeo } from "../geo";
 
 const NEW = "__new__";
 
 /** 주요 메뉴 프리셋 — 버튼으로 아이콘과 함께 기본 제공 */
+// prettier-ignore
 const MENU_PRESETS = [
   "감자탕", "국밥", "삼겹살", "곱창",
   "치킨", "찜닭", "칼국수", "김밥·분식",
@@ -15,6 +24,7 @@ const MENU_PRESETS = [
 ];
 
 /** 신규 식당의 지도 위치 — 기존 마커와 겹치지 않게 빈 슬롯에서 선택 */
+// prettier-ignore
 const POSITION_SLOTS = [
   { x: 860, y: 430 }, { x: 130, y: 180 }, { x: 640, y: 560 },
   { x: 880, y: 200 }, { x: 350, y: 90 }, { x: 120, y: 560 },
@@ -56,12 +66,25 @@ export default function ChargePage({ initialRestaurantId, goDetail }) {
         locationUrl: selected.locationUrl,
       }));
     } else if (isNew) {
-      setForm((f) => ({ ...f, name: "", coupon: false, mainMenu: "", guide: "", memo: "", address: "", locationUrl: "" }));
+      setForm((f) => ({
+        ...f,
+        name: "",
+        coupon: false,
+        mainMenu: "",
+        guide: "",
+        memo: "",
+        address: "",
+        locationUrl: "",
+      }));
     }
   }, [restaurantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (key) => (e) => {
-    const value = e?.target ? (e.target.type === "checkbox" ? e.target.checked : e.target.value) : e;
+    const value = e?.target
+      ? e.target.type === "checkbox"
+        ? e.target.checked
+        : e.target.value
+      : e;
     setForm((f) => ({ ...f, [key]: key === "amount" ? commaInput(value) : value }));
   };
 
@@ -154,7 +177,14 @@ export default function ChargePage({ initialRestaurantId, goDetail }) {
         />
 
         <div className="grid gap-token-4 md:grid-cols-2">
-          <Input label="충전일자" required type="date" value={form.date} onChange={set("date")} error={errors.date} />
+          <Input
+            label="충전일자"
+            required
+            type="date"
+            value={form.date}
+            onChange={set("date")}
+            error={errors.date}
+          />
           <Input
             label="예치금"
             required
@@ -179,12 +209,19 @@ export default function ChargePage({ initialRestaurantId, goDetail }) {
                 onChange={set("name")}
                 error={errors.name}
               />
-              <Input label="주요 메뉴" placeholder="예: 감자탕 (직접 입력 또는 아래에서 선택)" value={form.mainMenu} onChange={set("mainMenu")} />
+              <Input
+                label="주요 메뉴"
+                placeholder="예: 감자탕 (직접 입력 또는 아래에서 선택)"
+                value={form.mainMenu}
+                onChange={set("mainMenu")}
+              />
             </div>
 
             {/* 주요 메뉴 프리셋 — 클릭 시 메뉴와 아이콘이 함께 선택됨 */}
             <div>
-              <span className="mb-token-1 block text-body2 font-bold text-text">주요 메뉴 아이콘 선택</span>
+              <span className="mb-token-1 block text-body2 font-bold text-text">
+                주요 메뉴 아이콘 선택
+              </span>
               <div className="grid grid-cols-4 gap-token-2">
                 {MENU_PRESETS.map((menu) => {
                   const active = form.mainMenu === menu;
@@ -215,7 +252,9 @@ export default function ChargePage({ initialRestaurantId, goDetail }) {
             <span className="text-header">{restaurantIcon(selected)}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-body2 font-bold text-text">{selected.name}</p>
-              <p className="truncate text-caption text-text-muted">주요 메뉴: {selected.mainMenu || "-"}</p>
+              <p className="truncate text-caption text-text-muted">
+                주요 메뉴: {selected.mainMenu || "-"}
+              </p>
             </div>
             <span className="shrink-0 text-caption text-text-muted">
               상호·메뉴 수정은 '식당 정보'에서
@@ -231,7 +270,12 @@ export default function ChargePage({ initialRestaurantId, goDetail }) {
           value={form.guide}
           onChange={set("guide")}
         />
-        <Textarea label="메모" placeholder="예: 5/4일기준 은지 충전" value={form.memo} onChange={set("memo")} />
+        <Textarea
+          label="메모"
+          placeholder="예: 5/4일기준 은지 충전"
+          value={form.memo}
+          onChange={set("memo")}
+        />
 
         <Input
           label="위치 — 주소"

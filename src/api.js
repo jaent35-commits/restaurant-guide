@@ -47,8 +47,7 @@ export const fetchData = () => call("GET", "/api/data");
 export const setupSchema = () => call("POST", "/api/setup");
 
 /** 식당 생성 → { notionId } */
-export const apiCreateRestaurant = (restaurant) =>
-  call("POST", "/api/restaurants", { restaurant });
+export const apiCreateRestaurant = (restaurant) => call("POST", "/api/restaurants", { restaurant });
 
 /** 식당 전체 갱신 */
 export const apiUpdateRestaurant = (notionId, restaurant) =>
@@ -59,8 +58,16 @@ export const apiCreateTransaction = ({ transaction, balanceAfter, title, restaur
   call("POST", "/api/transactions", { transaction, balanceAfter, title, restaurantPageId });
 
 /** 거래 수정 */
-export const apiUpdateTransaction = (notionId, { transaction, balanceAfter, title, restaurantPageId }) =>
-  call("PUT", `/api/transactions/${notionId}`, { transaction, balanceAfter, title, restaurantPageId });
+export const apiUpdateTransaction = (
+  notionId,
+  { transaction, balanceAfter, title, restaurantPageId }
+) =>
+  call("PUT", `/api/transactions/${notionId}`, {
+    transaction,
+    balanceAfter,
+    title,
+    restaurantPageId,
+  });
 
 /** 거래 삭제 (노션에서는 아카이브) */
 export const apiDeleteTransaction = (notionId, { balanceAfter, restaurantPageId }) =>
@@ -76,5 +83,35 @@ export const apiPushSubscribe = (subscription) =>
   call("POST", "/api/push/subscribe", { subscription });
 
 /** 푸시 구독 해제 */
-export const apiPushUnsubscribe = (endpoint) =>
-  call("POST", "/api/push/unsubscribe", { endpoint });
+export const apiPushUnsubscribe = (endpoint) => call("POST", "/api/push/unsubscribe", { endpoint });
+
+/* ------------------------------- 접근 비밀번호 게이트 ------------------------------- */
+
+/**
+ * 홈(앱 전체) 접근 비밀번호 검증 — 대조는 서버(Worker)에서만 하고 원문은 응답에 없다.
+ * @returns {Promise<{ ok: boolean, reason: "ok" | "wrong" | "error" }>}
+ *   - ok=true, reason="ok"   : 통과
+ *   - reason="wrong"         : 비밀번호 불일치
+ *   - reason="error"         : 동기화 비활성/백엔드 오류 → 호출측에서 fail-closed 처리
+ */
+export async function apiVerifyGate(password) {
+  if (!apiEnabled) return { ok: false, reason: "error" };
+  try {
+    const res = await fetch(`${API_BASE}/api/gate/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(API_KEY ? { "X-Api-Key": API_KEY } : {}),
+      },
+      body: JSON.stringify({ password }),
+    });
+    if (res.status === 200) {
+      const data = await res.json().catch(() => ({}));
+      return { ok: !!data.ok, reason: data.ok ? "ok" : "wrong" };
+    }
+    if (res.status === 401) return { ok: false, reason: "wrong" };
+    return { ok: false, reason: "error" };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+}

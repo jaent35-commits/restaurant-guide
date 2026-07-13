@@ -37,8 +37,7 @@ export function onInstallPromptChange(fn) {
 
 /** 이미 앱(스탠드얼론)으로 실행 중인지 */
 export const isStandalone = () =>
-  window.matchMedia("(display-mode: standalone)").matches ||
-  window.navigator.standalone === true;
+  window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
 /** iOS Safari 여부 — beforeinstallprompt 미지원이라 수동 안내 필요 */
 export const isIos = () =>

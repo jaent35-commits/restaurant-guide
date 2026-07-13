@@ -35,9 +35,7 @@ export default function ListPage({ goDetail }) {
   // 가게 상호 / 주요 메뉴 검색 (+ '쿠폰 제외' 시 쿠폰 식당 숨김)
   const q = query.trim();
   const filtered = restaurantsWithBalance().filter(
-    (r) =>
-      (!q || r.name.includes(q) || r.mainMenu.includes(q)) &&
-      (!excludeCoupon || !r.coupon)
+    (r) => (!q || r.name.includes(q) || r.mainMenu.includes(q)) && (!excludeCoupon || !r.coupon)
   );
 
   const rows = [...filtered].sort((a, b) => {
@@ -57,7 +55,9 @@ export default function ListPage({ goDetail }) {
   });
 
   const toggleSort = (key) =>
-    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+    setSort((s) =>
+      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
 
   const arrow = (key) => (sort.key === key ? (sort.dir === "asc" ? " ▲" : " ▼") : "");
 

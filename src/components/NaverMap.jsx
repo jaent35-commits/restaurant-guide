@@ -57,7 +57,8 @@ export default function NaverMap({
   const fallback = getNaverConfig();
   const key = clientId ?? fallback.clientId;
 
-  const center = tower ?? restaurants.find((r) => typeof r.lat === "number" && typeof r.lng === "number");
+  const center =
+    tower ?? restaurants.find((r) => typeof r.lat === "number" && typeof r.lng === "number");
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -102,7 +103,11 @@ export default function NaverMap({
         if (tower) addMarker(tower, towerHtml);
         restaurants.forEach((r) => {
           if (typeof r.lat !== "number" || typeof r.lng !== "number") return;
-          addMarker(r, markerHtml(r, showBalance), interactive ? () => onSelectRef.current?.(r.id) : undefined);
+          addMarker(
+            r,
+            markerHtml(r, showBalance),
+            interactive ? () => onSelectRef.current?.(r.id) : undefined
+          );
         });
       })
       .catch((err) => {

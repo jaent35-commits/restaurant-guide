@@ -8,7 +8,7 @@ export const TOWER_ADDRESS = "서울시 관악구 보라매로3길 23";
 export const TOWER = { lat: 37.4901, lng: 126.9208 };
 
 // 서비스 지역(서울 및 인근) 바운딩 박스 — 이 밖의 좌표는 명백한 오지오코딩으로 간주해 교정
-export const GEO_BOUNDS = { minLat: 37.35, maxLat: 37.75, minLng: 126.70, maxLng: 127.25 };
+export const GEO_BOUNDS = { minLat: 37.35, maxLat: 37.75, minLng: 126.7, maxLng: 127.25 };
 // Nominatim(폴백) 검색을 좁히기 위한 관악구 인근 뷰박스
 const NOMINATIM_BOUNDS = { minLat: 37.44, maxLat: 37.54, minLng: 126.86, maxLng: 126.98 };
 

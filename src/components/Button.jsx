@@ -3,11 +3,9 @@ import React from "react";
 const VARIANTS = {
   primary:
     "bg-primary text-gray-100 hover:bg-primary-300 disabled:bg-gray-400 disabled:text-gray-100",
-  secondary:
-    "bg-gray-100 text-text border border-border hover:bg-surface disabled:text-gray-600",
+  secondary: "bg-gray-100 text-text border border-border hover:bg-surface disabled:text-gray-600",
   ghost: "bg-transparent text-text-muted hover:bg-surface disabled:text-gray-600",
-  danger:
-    "bg-danger text-gray-100 hover:opacity-90 disabled:bg-gray-400 disabled:text-gray-100",
+  danger: "bg-danger text-gray-100 hover:opacity-90 disabled:bg-gray-400 disabled:text-gray-100",
 };
 
 const SIZES = {

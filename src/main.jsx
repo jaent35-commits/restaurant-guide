@@ -26,6 +26,8 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register(`${import.meta.env.BASE_URL}sw.js`)
       .then(() => refreshPushSubscription()) // 기존 푸시 구독 서버 등록 갱신
-      .catch(() => {/* 등록 실패(비보안 컨텍스트 등)는 앱 동작에 영향 없음 */});
+      .catch(() => {
+        /* 등록 실패(비보안 컨텍스트 등)는 앱 동작에 영향 없음 */
+      });
   });
 }

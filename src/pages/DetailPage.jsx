@@ -1,8 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useStore } from "../store";
 import NaverMap from "../components/NaverMap";
-import { Button, Table, Badge, Modal, Input, Select, Textarea, Checkbox, FileInput, useToast, VoteButtons } from "../components";
-import { formatKRW, menuIcon, restaurantIcon, depositStatus, ICON_CHOICES, commaInput, parseAmount } from "../utils";
+import {
+  Button,
+  Table,
+  Badge,
+  Modal,
+  Input,
+  Select,
+  Textarea,
+  Checkbox,
+  FileInput,
+  useToast,
+  VoteButtons,
+} from "../components";
+import {
+  formatKRW,
+  menuIcon,
+  restaurantIcon,
+  depositStatus,
+  ICON_CHOICES,
+  commaInput,
+  parseAmount,
+} from "../utils";
 
 /** 🗺️ 상세페이지 전용: 네이버 지도 기반 미니 지도 (이동·확대 가능) */
 function CleanDetailMiniMap({ restaurant }) {
@@ -70,14 +90,22 @@ function EditModal({ open, onClose, restaurant, onSave }) {
       width="560px"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>취소</Button>
+          <Button variant="secondary" onClick={onClose}>
+            취소
+          </Button>
           <Button onClick={submit}>저장</Button>
         </>
       }
     >
       <div className="flex flex-col gap-token-4">
         <div className="grid gap-token-4 md:grid-cols-2">
-          <Input label="가게 상호" required value={form.name} onChange={set("name")} error={errors.name} />
+          <Input
+            label="가게 상호"
+            required
+            value={form.name}
+            onChange={set("name")}
+            error={errors.name}
+          />
           <Input label="주요 메뉴" value={form.mainMenu} onChange={set("mainMenu")} />
         </div>
 
@@ -155,7 +183,11 @@ function TransactionEditModal({ open, onClose, transaction, onSave, onDelete }) 
   if (!form) return null;
 
   const set = (key) => (e) => {
-    const value = e?.target ? (e.target.type === "checkbox" ? e.target.checked : e.target.value) : e;
+    const value = e?.target
+      ? e.target.type === "checkbox"
+        ? e.target.checked
+        : e.target.value
+      : e;
     setForm((f) => ({ ...f, [key]: key === "amount" ? commaInput(value) : value }));
   };
 
@@ -192,7 +224,9 @@ function TransactionEditModal({ open, onClose, transaction, onSave, onDelete }) 
           >
             {confirmDelete ? "정말 삭제할까요?" : "삭제"}
           </Button>
-          <Button variant="secondary" onClick={onClose}>취소</Button>
+          <Button variant="secondary" onClick={onClose}>
+            취소
+          </Button>
           <Button onClick={submit}>저장</Button>
         </>
       }
@@ -209,7 +243,14 @@ function TransactionEditModal({ open, onClose, transaction, onSave, onDelete }) 
               { value: "use", label: "사용" },
             ]}
           />
-          <Input label="일자" required type="date" value={form.date} onChange={set("date")} error={errors.date} />
+          <Input
+            label="일자"
+            required
+            type="date"
+            value={form.date}
+            onChange={set("date")}
+            error={errors.date}
+          />
         </div>
         <div className="grid gap-token-4 md:grid-cols-2">
           <Input
@@ -230,11 +271,15 @@ function TransactionEditModal({ open, onClose, transaction, onSave, onDelete }) 
         </div>
         <Checkbox label="🎟️ 쿠폰" checked={form.coupon} onChange={set("coupon")} />
         <Textarea label="메모" value={form.memo} onChange={set("memo")} />
-        <FileInput label="증빙서류 (영수증 이미지)" value={form.receipt} onChange={set("receipt")} />
+        <FileInput
+          label="증빙서류 (영수증 이미지)"
+          value={form.receipt}
+          onChange={set("receipt")}
+        />
         {confirmDelete && (
           <p className="rounded-md bg-surface px-token-3 py-token-2 text-caption text-danger">
-            삭제하면 잔액이 다시 계산되고 노션에서도 이력이 보관함으로 이동합니다. 삭제 버튼을 한 번 더
-            누르면 완전히 진행됩니다.
+            삭제하면 잔액이 다시 계산되고 노션에서도 이력이 보관함으로 이동합니다. 삭제 버튼을 한 번
+            더 누르면 완전히 진행됩니다.
           </p>
         )}
       </div>
@@ -271,7 +316,9 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
     return (
       <div className="flex flex-col items-start gap-token-3">
         <p className="text-body1 text-text-muted">식당을 찾을 수 없습니다.</p>
-        <Button variant="secondary" onClick={goBack}>목록으로</Button>
+        <Button variant="secondary" onClick={goBack}>
+          목록으로
+        </Button>
       </div>
     );
   }
@@ -322,7 +369,10 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
             className="text-primary-400 underline"
             onClick={(e) => {
               e.stopPropagation();
-              setReceiptView({ src: t.receipt, title: `${t.date} ${t.type === "charge" ? "충전" : "사용"} 증빙` });
+              setReceiptView({
+                src: t.receipt,
+                title: `${t.date} ${t.type === "charge" ? "충전" : "사용"} 증빙`,
+              });
             }}
           >
             보기
@@ -336,105 +386,111 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
   return (
     <div className="flex flex-col gap-token-4">
       <div>
-        <Button variant="ghost" size="sm" onClick={goBack}>← 목록으로</Button>
+        <Button variant="ghost" size="sm" onClick={goBack}>
+          ← 목록으로
+        </Button>
       </div>
 
       {/* 식당 요약 카드 — PC(lg~)는 정보(좌)+지도(우) 2열, 이하는 세로 배치 */}
       <section className="rounded-lg border border-list-line-100 bg-gray-100 p-token-5 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-x-token-6">
         <div>
-        <div className="flex flex-wrap items-start justify-between gap-token-4">
-          <div className="w-full md:w-auto">
-            {/* 모바일: 상태/쿠폰 배지를 가게 상호 위에 표시 */}
-            <div className="mb-token-2 flex gap-token-2 md:hidden">
-              <Badge tone={status.key}>{status.label}</Badge>
-              {restaurant.coupon && <Badge tone="coupon">🎟️ 쿠폰</Badge>}
-            </div>
-            <div className="flex items-center gap-token-4">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-header">
-              {restaurantIcon(restaurant)}
-            </span>
-            <div>
-              <div className="flex items-center gap-token-2">
-                <h2 className="text-title font-bold text-text">{restaurant.name}</h2>
-                {/* 데스크톱/태블릿: 배지를 상호 옆에 */}
-                <span className="hidden items-center gap-token-2 md:flex">
-                  <Badge tone={status.key}>{status.label}</Badge>
-                  {restaurant.coupon && <Badge tone="coupon">🎟️ 쿠폰</Badge>}
+          <div className="flex flex-wrap items-start justify-between gap-token-4">
+            <div className="w-full md:w-auto">
+              {/* 모바일: 상태/쿠폰 배지를 가게 상호 위에 표시 */}
+              <div className="mb-token-2 flex gap-token-2 md:hidden">
+                <Badge tone={status.key}>{status.label}</Badge>
+                {restaurant.coupon && <Badge tone="coupon">🎟️ 쿠폰</Badge>}
+              </div>
+              <div className="flex items-center gap-token-4">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-header">
+                  {restaurantIcon(restaurant)}
                 </span>
-                {/* 모바일: 편집을 상호 옆 아이콘 버튼으로 */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="px-token-1 md:hidden"
-                  aria-label="가게 정보 편집"
-                  onClick={() => setEditOpen(true)}
+                <div>
+                  <div className="flex items-center gap-token-2">
+                    <h2 className="text-title font-bold text-text">{restaurant.name}</h2>
+                    {/* 데스크톱/태블릿: 배지를 상호 옆에 */}
+                    <span className="hidden items-center gap-token-2 md:flex">
+                      <Badge tone={status.key}>{status.label}</Badge>
+                      {restaurant.coupon && <Badge tone="coupon">🎟️ 쿠폰</Badge>}
+                    </span>
+                    {/* 모바일: 편집을 상호 옆 아이콘 버튼으로 */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="px-token-1 md:hidden"
+                      aria-label="가게 정보 편집"
+                      onClick={() => setEditOpen(true)}
+                    >
+                      ✏️
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-token-3">
+                    <span className="text-body2 text-text-muted">{restaurant.mainMenu}</span>
+                    <VoteButtons
+                      likes={restaurant.likes}
+                      dislikes={restaurant.dislikes}
+                      myVote={restaurant.myVote}
+                      onVote={(kind) => dispatch({ type: "VOTE", id: restaurant.id, vote: kind })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-token-3">
+              <div className="text-right">
+                <p className="text-caption text-text-muted">잔여 예치금</p>
+                <p
+                  className={`text-title font-bold ${balance < 0 ? "text-danger" : "text-primary-400"}`}
                 >
-                  ✏️
-                </Button>
+                  {formatKRW(balance)}
+                </p>
               </div>
-              <div className="flex items-center gap-token-3">
-                <span className="text-body2 text-text-muted">{restaurant.mainMenu}</span>
-                <VoteButtons
-                  likes={restaurant.likes}
-                  dislikes={restaurant.dislikes}
-                  myVote={restaurant.myVote}
-                  onVote={(kind) => dispatch({ type: "VOTE", id: restaurant.id, vote: kind })}
-                />
-              </div>
-            </div>
+              {/* 데스크톱/태블릿 전용 — 모바일은 상호 옆 아이콘 버튼 사용 */}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="hidden md:inline-flex"
+                onClick={() => setEditOpen(true)}
+              >
+                ✏️ 편집
+              </Button>
             </div>
           </div>
-          <div className="flex items-start gap-token-3">
-            <div className="text-right">
-              <p className="text-caption text-text-muted">잔여 예치금</p>
-              <p className={`text-title font-bold ${balance < 0 ? "text-danger" : "text-primary-400"}`}>
-                {formatKRW(balance)}
-              </p>
+
+          <dl className="mt-token-4 grid gap-token-2 border-t border-list-line-100 pt-token-4 text-body2 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <dt className="font-bold text-text-muted">위치</dt>
+              <dd className="text-text">{restaurant.address || "-"}</dd>
             </div>
-            {/* 데스크톱/태블릿 전용 — 모바일은 상호 옆 아이콘 버튼 사용 */}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="hidden md:inline-flex"
-              onClick={() => setEditOpen(true)}
-            >
-              ✏️ 편집
-            </Button>
-          </div>
+            {restaurant.guide && (
+              <div className="md:col-span-2">
+                <dt className="font-bold text-text-muted">사용 가이드</dt>
+                <dd className="text-text">{restaurant.guide}</dd>
+              </div>
+            )}
+            {restaurant.memo && (
+              <div className="md:col-span-2">
+                <dt className="font-bold text-text-muted">메모</dt>
+                <dd className="text-text">{restaurant.memo}</dd>
+              </div>
+            )}
+          </dl>
         </div>
 
-        <dl className="mt-token-4 grid gap-token-2 border-t border-list-line-100 pt-token-4 text-body2 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <dt className="font-bold text-text-muted">위치</dt>
-            <dd className="text-text">{restaurant.address || "-"}</dd>
-          </div>
-          {restaurant.guide && (
-            <div className="md:col-span-2">
-              <dt className="font-bold text-text-muted">사용 가이드</dt>
-              <dd className="text-text">{restaurant.guide}</dd>
-            </div>
-          )}
-          {restaurant.memo && (
-            <div className="md:col-span-2">
-              <dt className="font-bold text-text-muted">메모</dt>
-              <dd className="text-text">{restaurant.memo}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
+        {/* 🗺️ 청정 미니 지도 컴포넌트 호출 */}
+        <div className="mt-4 h-[240px] lg:row-span-2 lg:mt-0 lg:h-full lg:min-h-[260px]">
+          <CleanDetailMiniMap restaurant={restaurant} />
+        </div>
 
-      {/* 🗺️ 청정 미니 지도 컴포넌트 호출 */}
-      <div className="mt-4 h-[240px] lg:row-span-2 lg:mt-0 lg:h-full lg:min-h-[260px]">
-        <CleanDetailMiniMap restaurant={restaurant} />
-      </div>
-
-      <div className="mt-4 flex justify-end gap-token-2 lg:self-end">
-        <Button variant="secondary" onClick={() => goCharge(restaurant.id)}>예치금 충전</Button>
-        <Button onClick={() => goUse(restaurant.id)} disabled={balance === 0}>
-          사용 등록
-        </Button>
-      </div>
-    </section>
+        <div className="mt-4 flex justify-end gap-token-2 lg:self-end">
+          <Button variant="secondary" onClick={() => goCharge(restaurant.id)}>
+            예치금 충전
+          </Button>
+          <Button onClick={() => goUse(restaurant.id)} disabled={balance === 0}>
+            사용 등록
+          </Button>
+        </div>
+      </section>
 
       <section className="flex flex-col gap-token-3">
         <h3 className="text-header font-bold text-text">
@@ -442,9 +498,13 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
         </h3>
         <p className="text-caption text-text-muted">
           {isTouch ? (
-            <>✏️ 이력을 <span className="font-bold">2초간 꾹 누르면</span> 수정할 수 있어요.</>
+            <>
+              ✏️ 이력을 <span className="font-bold">2초간 꾹 누르면</span> 수정할 수 있어요.
+            </>
           ) : (
-            <>✏️ 이력을 <span className="font-bold">클릭하면</span> 수정할 수 있어요.</>
+            <>
+              ✏️ 이력을 <span className="font-bold">클릭하면</span> 수정할 수 있어요.
+            </>
           )}
         </p>
         <Table
@@ -499,10 +559,18 @@ export default function DetailPage({ restaurantId, goBack, goCharge, goUse }) {
         open={!!receiptView}
         onClose={() => setReceiptView(null)}
         title={receiptView?.title ?? ""}
-        footer={<Button variant="secondary" onClick={() => setReceiptView(null)}>닫기</Button>}
+        footer={
+          <Button variant="secondary" onClick={() => setReceiptView(null)}>
+            닫기
+          </Button>
+        }
       >
         {receiptView && (
-          <img src={receiptView.src} alt="증빙서류" className="mx-auto max-h-[60vh] rounded-md border border-border" />
+          <img
+            src={receiptView.src}
+            alt="증빙서류"
+            className="mx-auto max-h-[60vh] rounded-md border border-border"
+          />
         )}
       </Modal>
     </div>

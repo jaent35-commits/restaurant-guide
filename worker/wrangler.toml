@@ -1,0 +1,35 @@
+# Cloudflare Worker 설정 — 노션 동기화 프록시 + 웹푸시 발송
+# 배포: worker 폴더에서  npx wrangler deploy
+# 토큰 등록:            npx wrangler secret put NOTION_TOKEN
+#
+# ─── 웹푸시 최초 설정 (한 번만) ───────────────────────────────────────────────
+# 1) KV 네임스페이스 생성:
+#      npx wrangler kv namespace create PUSH_SUBS
+#    출력된 id 를 아래 [[kv_namespaces]] 의 id 에 붙여넣기
+# 2) VAPID 개인키 등록 (값은 PUSH_SETUP.md 참고):
+#      npx wrangler secret put VAPID_PRIVATE_KEY
+# 3) 재배포: npx wrangler deploy
+
+name = "rd-restaurant-notion-proxy"
+main = "index.js"
+compatibility_date = "2026-07-01"
+
+[vars]
+# 노션 DB ID (이미 생성된 DB 기준 — 변경 시 여기만 수정)
+RESTAURANTS_DB_ID = "397a7720ae28800fbb25d4dd2236a29d"
+TRANSACTIONS_DB_ID = "397a7720ae28803987c0c4280dc4f11a"
+# (선택) 비밀번호 게이트 전용 DB ID — 미설정 시 최초 검증 때 자동 생성/시드(초기값 53075).
+#   자동 생성 후 여기에 등록해 두면 콜드스타트 검색 지연이 줄어듭니다.
+# PASSWORD_DB_ID = ""
+# 허용 오리진 (보안을 높이려면 사이트 주소로 제한)
+ALLOWED_ORIGIN = "*"
+# ALLOWED_ORIGIN = "https://rd-restaurant.duckdns.org"
+
+# 웹푸시 VAPID 공개키 (개인키는 secret 으로만 — 위 설정 절차 참고)
+VAPID_PUBLIC_KEY = "BIbDgHMM5bxc_YVhU5TXEkwEzlVM9i-rQxd-FH7yybzxCHqrlQsfrfEWgzOoQ22ivBFetBLxlApa2zQUrEg3eVA"
+VAPID_SUBJECT = "mailto:eunji_heo@daekyo.co.kr"
+
+# 웹푸시 구독 저장소 — id 는 `npx wrangler kv namespace create PUSH_SUBS` 출력값으로 교체
+[[kv_namespaces]]
+binding = "PUSH_SUBS"
+id = "32752daa255446d1be033116cb3683bf"

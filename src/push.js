@@ -17,10 +17,7 @@ function urlBase64ToUint8Array(base64) {
 }
 
 export const pushSupported = () =>
-  apiEnabled &&
-  "serviceWorker" in navigator &&
-  "PushManager" in window &&
-  "Notification" in window;
+  apiEnabled && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
 async function getRegistration() {
   // 서비스워커는 프로덕션에서만 등록됨 (main.jsx) — 없으면 null

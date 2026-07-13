@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useStore } from "../store";
 import { useTowerGeo } from "../geo";
 import NaverMap from "../components/NaverMap";
+import { formatKRW, restaurantIcon } from "../utils";
 
 export default function HomePage({ goDetail }) {
   const { restaurantsWithBalance } = useStore();
@@ -20,50 +21,15 @@ export default function HomePage({ goDetail }) {
     (r) => r.balance !== 0 && typeof r.lat === "number" && typeof r.lng === "number"
   );
 
-  // 금액을 '원' 포맷으로 직접 변경
-  const formatMoney = (amount) => {
-    return `${Number(amount).toLocaleString("ko-KR")}원`;
-  };
-
-  // 식당 메뉴 이름에 따라 이모지 아이콘 자동 매칭
-  const getIcon = (menu = "") => {
-    const rules = [
-      [/(감자탕|탕|국밥|찌개|전골)/, "🍲"],
-      [/(치킨|닭|찜닭)/, "🍗"],
-      [/(고기|축산|삼겹|갈비|곱창|정육)/, "🥩"],
-      [/(국수|칼국수|면|라멘|우동|파스타)/, "🍜"],
-      [/(김밥|분식|떡볶이)/, "🍙"],
-      [/(초밥|회|스시|물회)/, "🍣"],
-      [/(돈까스|돈가스|카츠|katsu|튀김)/i, "🍤"],
-      [/(샌드위치|샌드|서브|토스트)/, "🥪"],
-      [/(피자)/, "🍕"],
-      [/(버거|햄버거)/, "🍔"],
-      [/(카페|커피|디저트)/, "☕"],
-      [/(중식|짜장|짬뽕)/, "🥡"],
-      [/(도시락|백반|한식)/, "🍱"]
-    ];
-    for (const [regex, emoji] of rules) {
-      if (regex.test(menu)) return emoji;
-    }
-    return "🍴";
-  };
-
   return (
     <div className="grid gap-token-4 lg:grid-cols-[1fr_360px]">
       {/* 상단 왼쪽 지도 (네이버 지도) */}
       <section className="flex min-h-[420px] flex-col gap-token-2">
         <div className="h-[520px] w-full">
-          <NaverMap
-            tower={tower}
-            restaurants={mapRestaurants}
-            onSelect={goDetail}
-            zoom={16}
-          />
+          <NaverMap tower={tower} restaurants={mapRestaurants} onSelect={goDetail} zoom={16} />
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-caption text-text-muted">
-            네이버 지도 · 대교타워 기준 실좌표 표시
-          </p>
+          <p className="text-caption text-text-muted">네이버 지도 · 대교타워 기준 실좌표 표시</p>
         </div>
       </section>
 
@@ -100,7 +66,7 @@ export default function HomePage({ goDetail }) {
                   }`}
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-header">
-                    {getIcon(r.mainMenu || r.name)}
+                    {restaurantIcon(r)}
                   </span>
 
                   <span className="min-w-0 flex-1">
@@ -117,7 +83,9 @@ export default function HomePage({ goDetail }) {
                         </span>
                       )}
                     </span>
-                    <span className="block truncate text-caption text-text-muted">{r.mainMenu}</span>
+                    <span className="block truncate text-caption text-text-muted">
+                      {r.mainMenu}
+                    </span>
                   </span>
 
                   <span
@@ -125,7 +93,7 @@ export default function HomePage({ goDetail }) {
                       r.balance < 0 ? "text-danger" : "text-primary-400"
                     }`}
                   >
-                    {formatMoney(r.balance)}
+                    {formatKRW(r.balance)}
                   </span>
                 </button>
               </li>

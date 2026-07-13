@@ -79,9 +79,7 @@ export default function InstallToast() {
             className="h-12 w-12 shrink-0 rounded-lg border border-border"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-body2 font-bold text-text">
-              🌙 야근식당 앱을 설치해 보세요
-            </p>
+            <p className="text-body2 font-bold text-text">🌙 야근식당 앱을 설치해 보세요</p>
             {ios ? (
               <p className="mt-token-1 text-caption text-text-muted">
                 사파리 하단 <span className="font-bold">공유 버튼(↑)</span> →{" "}

@@ -88,7 +88,14 @@ export default function UsePage({ initialRestaurantId, goDetail }) {
           </div>
         )}
 
-        <Input label="사용일자" required type="date" value={date} onChange={(e) => setDate(e.target.value)} error={errors.date} />
+        <Input
+          label="사용일자"
+          required
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          error={errors.date}
+        />
 
         {/* 사용금액 / 잔액 입력 모드 전환 */}
         <div>
@@ -134,7 +141,9 @@ export default function UsePage({ initialRestaurantId, goDetail }) {
             </div>
             <div className="flex justify-between">
               <span className="text-text-muted">사용 후 잔액</span>
-              <span className={`font-bold ${afterBalance < 0 ? "text-danger" : "text-primary-400"}`}>
+              <span
+                className={`font-bold ${afterBalance < 0 ? "text-danger" : "text-primary-400"}`}
+              >
                 {formatKRW(afterBalance)}
                 {afterBalance < 0 && " (외상)"}
               </span>

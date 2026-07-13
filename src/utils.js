@@ -39,6 +39,7 @@ export function depositStatus(balance) {
 }
 
 /** 편집 팝업에서 선택 가능한 아이콘 목록 */
+// prettier-ignore
 export const ICON_CHOICES = [
   "🍲", "🍗", "🥩", "🍜", "🍙", "🍣", "🍤",
   "🥪", "🍕", "🍔", "☕", "🥡", "🍱", "🍴",

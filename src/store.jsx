@@ -40,6 +40,7 @@ const seedReceipt = (label) =>
    position: 홈 지도(뷰박스 1000x640)에서 대교타워(500,320) 기준 상대 좌표
 ----------------------------------------------------------------------------- */
 function seedData() {
+  // prettier-ignore
   const restaurants = [
     {
       id: "r_jopro",
@@ -114,6 +115,7 @@ function seedData() {
   ];
 
   // 회의록 원본 순번 1~15 (충전 증빙은 플레이스홀더, 사용 증빙은 null 허용)
+  // prettier-ignore
   const transactions = [
     // 1. 조프로 감자탕 충전 210,000 (2026-02-27, 5/4일 기준)
     {
@@ -515,7 +517,8 @@ export function StoreProvider({ children }) {
     // v2: 네이버 지오코더 도입 — geocodedFrom 에 버전 접두사를 붙여, 기존에 부정확하게
     //     지오코딩된 좌표도 한 번은 다시 계산하도록 강제한다.
     const GEO_VER = "v2";
-    const sourceOf = (r) => (r.address && r.address.trim()) || (r.locationUrl && r.locationUrl.trim()) || "";
+    const sourceOf = (r) =>
+      (r.address && r.address.trim()) || (r.locationUrl && r.locationUrl.trim()) || "";
     const keyOf = (r) => {
       const src = sourceOf(r);
       return src ? `${GEO_VER}:${src}` : "";
