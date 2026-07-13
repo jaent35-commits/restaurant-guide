@@ -14,9 +14,9 @@ export default function HomePage({ goDetail }) {
     .filter((r) => r.balance !== 0)
     .sort((a, b) => b.balance - a.balance);
 
-  // 지도에는 좌표가 있는 등록 가게를 모두 표시(상호·잔액 포함)
+  // 지도에는 좌표가 있는 '활성' 가게만 표시(예치금 0원=비활성 가게는 숨김)
   const mapRestaurants = all.filter(
-    (r) => typeof r.lat === "number" && typeof r.lng === "number"
+    (r) => r.balance !== 0 && typeof r.lat === "number" && typeof r.lng === "number"
   );
 
   // 💡 [자급자족 1] 외부 utils 안 거치고, 금액을 '원' 포맷으로 직접 변경
@@ -78,7 +78,11 @@ export default function HomePage({ goDetail }) {
                 <button
                   type="button"
                   onClick={() => goDetail(r.id)}
-                  className="flex w-full items-center gap-token-3 rounded-lg border border-list-line-100 bg-gray-100 p-token-3 text-left hover:border-primary-300"
+                  className={`flex w-full items-center gap-token-3 rounded-lg bg-gray-100 p-token-3 text-left transition-colors ${
+                    r.coupon
+                      ? "border-2 border-orange-100 hover:border-orange-100"
+                      : "border border-list-line-100 hover:border-primary-300"
+                  }`}
                 >
                   {/* 이모지 매칭 적용 */}
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-header">
@@ -88,6 +92,11 @@ export default function HomePage({ goDetail }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-token-2">
                       <span className="truncate text-body2 font-bold text-text">{r.name}</span>
+                      {r.coupon && (
+                        <span className="shrink-0 rounded bg-orange-100/20 px-1.5 py-0.5 text-caption font-bold text-orange-100">
+                          🎟️ 쿠폰
+                        </span>
+                      )}
                       {r.balance < 0 && (
                         <span className="rounded bg-red-100 px-1.5 py-0.5 text-caption font-medium text-red-800">
                           외상

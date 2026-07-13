@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 /** 스크롤 시 나타나는 "맨 위로" 플로팅 레이어 버튼 */
 export default function ScrollTopButton() {
   const [visible, setVisible] = useState(false);
+  const btnRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 240);
@@ -11,10 +12,26 @@ export default function ScrollTopButton() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // 버튼이 떠 있는 동안, 마지막 콘텐츠가 버튼에 가려지지 않도록
+  // 문서 하단에 버튼 높이(+여백)만큼 빈 패딩을 만든다.
+  useEffect(() => {
+    if (!visible) {
+      document.body.style.paddingBottom = "";
+      return undefined;
+    }
+    const h = btnRef.current?.offsetHeight ?? 44;
+    // 버튼 높이 + 하단 오프셋(bottom-token-6 ≈ 24px) 만큼 확보
+    document.body.style.paddingBottom = `${h + 24}px`;
+    return () => {
+      document.body.style.paddingBottom = "";
+    };
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <button
+      ref={btnRef}
       type="button"
       aria-label="맨 위로"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

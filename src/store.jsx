@@ -390,14 +390,20 @@ export function StoreProvider({ children }) {
         const balanceAfter = prevBalance + (t.type === "charge" ? t.amount : -t.amount);
         const mmdd = (t.date || "").slice(5);
         const title = `${restaurant?.name ?? ""} ${t.type === "charge" ? "충전" : "사용"} (${mmdd})`;
-        enqueue(() =>
-          apiCreateTransaction({
+        enqueue(async () => {
+          const { notionId } = await apiCreateTransaction({
             transaction: { ...t, receipt: undefined },
             balanceAfter,
             title,
             restaurantPageId: notionIdOf(t.restaurantId),
-          })
-        );
+          });
+          // ⭐ 생성된 노션 페이지 id 를 매핑에 저장해야
+          //    이후 이 거래를 수정/삭제할 때 올바른 노션 페이지를 대상으로 반영된다.
+          if (notionId) {
+            idMapRef.current[t.id] = notionId;
+            saveJSON(NOTION_IDMAP_KEY, idMapRef.current);
+          }
+        });
         break;
       }
       case "UPDATE_TRANSACTION": {

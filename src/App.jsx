@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StoreProvider } from "./store";
-import { ToastProvider, ScrollTopButton, PushToggle, InstallToast } from "./components";
+import { ToastProvider, ScrollTopButton, PushToggle, InstallToast, useToast } from "./components";
 import HomePage from "./pages/HomePage";
 import ListPage from "./pages/ListPage";
 import DetailPage from "./pages/DetailPage";
@@ -14,6 +14,55 @@ const NAV = [
   { key: "use", label: "사용 등록" },
 ];
 
+/**
+ * 모바일 하드웨어 '뒤로가기' 처리 — 두 번 눌러야 앱이 종료된다.
+ * 한 번 누르면 "한 번 더 누르면 종료됩니다" 토스트를 띄우고,
+ * 2초 안에 다시 누르면 앱을 종료(히스토리 뒤로)한다.
+ * (설치형 PWA / 모바일 웹뷰 등 뒤로가기 버튼이 있는 환경 대상)
+ */
+function BackExitGuard() {
+  const toast = useToast();
+  const armedRef = useRef(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    // 뒤로가기 버튼이 있는 환경(모바일/설치형)에서만 동작
+    const isTouch =
+      typeof window !== "undefined" &&
+      (window.matchMedia?.("(pointer: coarse)").matches ||
+        window.matchMedia?.("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true);
+    if (!isTouch) return undefined;
+
+    // 뒤로가기를 가로채기 위한 히스토리 항목을 하나 쌓아둔다
+    window.history.pushState(null, "", window.location.href);
+
+    const onPopState = () => {
+      if (armedRef.current) {
+        // 2초 내 두 번째 뒤로가기 → 실제 종료(앱 진입 지점 밖으로 이동)
+        window.history.back();
+        return;
+      }
+      // 첫 번째 뒤로가기 → 종료 안내 후 다시 히스토리를 쌓아 앱에 머무름
+      window.history.pushState(null, "", window.location.href);
+      toast("한 번 더 누르면 앱이 종료됩니다.", "info");
+      armedRef.current = true;
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        armedRef.current = false;
+      }, 2000);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      clearTimeout(timerRef.current);
+    };
+  }, [toast]);
+
+  return null;
+}
+
 export default function App() {
   const [route, setRoute] = useState({ page: "home", restaurantId: null });
 
@@ -24,6 +73,7 @@ export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
+        <BackExitGuard />
         <div className="min-h-full">
           <header className="sticky top-0 z-40 border-b border-list-line-100 bg-gray-100">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-token-4 px-token-4 py-token-3 md:py-token-6">

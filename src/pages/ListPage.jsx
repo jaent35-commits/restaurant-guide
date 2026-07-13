@@ -120,6 +120,12 @@ export default function ListPage({ goDetail }) {
       },
     },
     {
+      key: "coupon",
+      header: "쿠폰",
+      align: "center",
+      render: (r) => (r.coupon ? <Badge tone="coupon">🎟️ 쿠폰</Badge> : "-"),
+    },
+    {
       key: "vote",
       header: "좋아요/싫어요",
       align: "center",
