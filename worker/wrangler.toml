@@ -16,8 +16,8 @@ compatibility_date = "2026-07-01"
 
 [vars]
 # 노션 DB ID (이미 생성된 DB 기준 — 변경 시 여기만 수정)
-RESTAURANTS_DB_ID = "397a7720ae28800fbb25d4dd2236a29d"
-TRANSACTIONS_DB_ID = "397a7720ae28803987c0c4280dc4f11a"
+RESTAURANTS_DB_ID = "4142226516b581f581d1d9a2a009abd5"
+TRANSACTIONS_DB_ID = "4142226516b5819b8b75d4c10fc779d6"
 # (선택) 비밀번호 게이트 전용 DB ID — 미설정 시 최초 검증 때 자동 생성/시드(초기값 53075).
 #   자동 생성 후 여기에 등록해 두면 콜드스타트 검색 지연이 줄어듭니다.
 # PASSWORD_DB_ID = ""
