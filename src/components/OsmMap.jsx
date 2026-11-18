@@ -2,15 +2,15 @@ import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TOWER } from "../geo";
-import { formatKRW, restaurantIcon, depositStatus } from "../utils";
+import { formatKRW, restaurantIcon, depositStatus, escapeHtml } from "../utils";
 
 export function markerHtml(r) {
   const status = depositStatus(r.balance);
   return `
     <div class="map-marker osm-anchor${status.key === "credit" ? " map-marker--credit" : ""}">
-      <div class="map-marker__icon">${restaurantIcon(r)}</div>
+      <div class="map-marker__icon">${escapeHtml(restaurantIcon(r))}</div>
       <div class="map-marker__label">
-        <strong>${r.name}</strong>
+        <strong>${escapeHtml(r.name)}</strong>
         <span class="${r.balance < 0 ? "is-credit" : ""}">${formatKRW(r.balance)}</span>
       </div>
     </div>`;

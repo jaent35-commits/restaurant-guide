@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { loadNaverMaps, getNaverConfig } from "../naverSdk";
-import { formatKRW, restaurantIcon, depositStatus } from "../utils";
+import { formatKRW, restaurantIcon, depositStatus, escapeHtml } from "../utils";
 
 /** 식당 마커 HTML — 홈 전체지도/미니맵 공통 (showBalance=false 면 잔액 숨김) */
 export function markerHtml(r, showBalance = true) {
@@ -10,9 +10,9 @@ export function markerHtml(r, showBalance = true) {
     : "";
   return `
     <div class="map-marker${status.key === "credit" ? " map-marker--credit" : ""}">
-      <div class="map-marker__icon">${restaurantIcon(r)}</div>
+      <div class="map-marker__icon">${escapeHtml(restaurantIcon(r))}</div>
       <div class="map-marker__label">
-        <strong>${r.name}</strong>
+        <strong>${escapeHtml(r.name)}</strong>
         ${balance}
       </div>
     </div>`;

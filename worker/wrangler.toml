@@ -21,9 +21,9 @@ TRANSACTIONS_DB_ID = "4142226516b5819b8b75d4c10fc779d6"
 # (선택) 비밀번호 게이트 전용 DB ID — 미설정 시 최초 검증 때 자동 생성/시드(초기값 53075).
 #   자동 생성 후 여기에 등록해 두면 콜드스타트 검색 지연이 줄어듭니다.
 # PASSWORD_DB_ID = ""
-# 허용 오리진 (보안을 높이려면 사이트 주소로 제한)
-ALLOWED_ORIGIN = "*"
-# ALLOWED_ORIGIN = "https://rd-restaurant.duckdns.org"
+# 허용 오리진 — 쉼표로 여러 개 지정. 목록에 없는 사이트의 브라우저 요청은 403 차단.
+#   운영 도메인 + 로컬 개발 서버(npm run dev). 전체 허용으로 되돌리려면 "*"
+ALLOWED_ORIGIN = "https://rd-restaurant.duckdns.org,http://localhost:5173"
 
 # 웹푸시 VAPID 공개키 (개인키는 secret 으로만 — 위 설정 절차 참고)
 VAPID_PUBLIC_KEY = "BIbDgHMM5bxc_YVhU5TXEkwEzlVM9i-rQxd-FH7yybzxCHqrlQsfrfEWgzOoQ22ivBFetBLxlApa2zQUrEg3eVA"

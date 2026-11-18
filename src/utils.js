@@ -1,5 +1,13 @@
 // 공용 유틸 — 금액 포맷, 메뉴 아이콘 매핑, 식당 상태 판정
 
+/** HTML 특수문자 이스케이프 — 사용자 입력을 innerHTML/HTML 문자열에 넣을 때 필수 (XSS 방지) */
+export function escapeHtml(s) {
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+  );
+}
+
 /** 12345 → "12,345" */
 export function formatComma(value) {
   const n = Number(value);

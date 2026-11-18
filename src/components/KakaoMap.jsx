@@ -1,16 +1,16 @@
 import React, { useEffect, useRef } from "react";
 import { TOWER } from "../geo";
 import { loadKakaoSdk } from "../kakaoSdk";
-import { formatKRW, restaurantIcon, depositStatus } from "../utils";
+import { formatKRW, restaurantIcon, depositStatus, escapeHtml } from "../utils";
 
 function markerElement(r, onSelect) {
   const status = depositStatus(r.balance);
   const el = document.createElement("div");
   el.className = `map-marker${status.key === "credit" ? " map-marker--credit" : ""}`;
   el.innerHTML = `
-    <div class="map-marker__icon">${restaurantIcon(r)}</div>
+    <div class="map-marker__icon">${escapeHtml(restaurantIcon(r))}</div>
     <div class="map-marker__label">
-      <strong>${r.name}</strong>
+      <strong>${escapeHtml(r.name)}</strong>
       <span class="${r.balance < 0 ? "is-credit" : ""}">${formatKRW(r.balance)}</span>
     </div>`;
   el.addEventListener("click", () => onSelect(r.id));

@@ -8,7 +8,7 @@
  *   NOTION_TOKEN        (secret) 노션 Integration 토큰
  *   RESTAURANTS_DB_ID   식당 목록 DB ID
  *   TRANSACTIONS_DB_ID  입출금 이력 DB ID
- *   ALLOWED_ORIGIN      허용 오리진 (기본 *)
+ *   ALLOWED_ORIGIN      허용 오리진 — 쉼표로 여러 개 지정 가능 (미설정 시 * = 전체 허용)
  *   API_KEY             (선택, secret) 설정 시 X-Api-Key 헤더 요구
  *   VAPID_PUBLIC_KEY    (푸시) VAPID 공개키 — base64url raw 65바이트
  *   VAPID_PRIVATE_KEY   (푸시, secret) VAPID 개인키 d — base64url 32바이트
@@ -36,19 +36,41 @@ const NOTION_VERSION = "2022-06-28";
 
 /* ---------------------------------- 유틸 ---------------------------------- */
 
-function corsHeaders(env) {
-  return {
-    "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
+/** ALLOWED_ORIGIN(쉼표 구분 목록) → 배열. 미설정 시 "*"(전체 허용) */
+function allowedOrigins(env) {
+  return String(env.ALLOWED_ORIGIN || "*")
+    .split(",")
+    .map((s) => s.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+}
+
+/** 브라우저 Origin 이 허용 목록에 있는지. Origin 헤더 없음(서버 간 호출 등)은 CORS 대상 아님 → true */
+function isOriginAllowed(env, origin) {
+  if (!origin) return true;
+  const list = allowedOrigins(env);
+  return list.includes("*") || list.includes(origin);
+}
+
+/** 요청 Origin 이 허용 목록에 있을 때만 그 Origin 을 반사(허용 외 오리진엔 ACAO 미부여) */
+function corsHeaders(env, request) {
+  const origin = request.headers.get("Origin");
+  const list = allowedOrigins(env);
+  const headers = {
     "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,X-Push-Sender",
     "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
+  if (list.includes("*")) headers["Access-Control-Allow-Origin"] = "*";
+  else if (origin && list.includes(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
 }
 
+/** JSON 응답 — CORS 헤더는 fetch 진입점에서 일괄 부여 */
 function json(env, body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders(env) },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -326,10 +348,29 @@ async function verifyGatePassword(env, submitted) {
 
 export default {
   async fetch(request, env, ctx) {
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders(env) });
+    const cors = corsHeaders(env, request);
+
+    // 허용되지 않은 오리진의 브라우저 요청은 사전요청(OPTIONS) 포함 모두 차단
+    if (!isOriginAllowed(env, request.headers.get("Origin"))) {
+      return new Response(JSON.stringify({ error: "forbidden origin" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", Vary: "Origin" },
+      });
     }
 
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: cors });
+    }
+
+    const res = await route(request, env, ctx);
+    const out = new Response(res.body, res);
+    for (const [k, v] of Object.entries(cors)) out.headers.set(k, v);
+    return out;
+  },
+};
+
+async function route(request, env, ctx) {
+  {
     // 선택적 API 키 검사
     if (env.API_KEY && request.headers.get("X-Api-Key") !== env.API_KEY) {
       return json(env, { error: "unauthorized" }, 401);
@@ -517,5 +558,5 @@ export default {
     } catch (e) {
       return json(env, { error: String(e.message || e) }, 500);
     }
-  },
-};
+  }
+}
